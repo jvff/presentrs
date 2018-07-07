@@ -4,3 +4,4 @@ version = "0.1.0"
 authors = ["Janito Vaqueiro Ferreira Filho <janito.vff@gmail.com>"]
 
 [dependencies]
+actix-web = "0.6"
