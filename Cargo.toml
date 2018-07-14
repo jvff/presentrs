@@ -5,3 +5,4 @@ authors = ["Janito Vaqueiro Ferreira Filho <janito.vff@gmail.com>"]
 
 [dependencies]
 actix-web = "0.6"
+failure = "0.1"
