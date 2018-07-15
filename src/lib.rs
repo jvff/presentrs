@@ -1,4 +1,6 @@
 #[cfg(feature = "client")]
+extern crate stdweb;
+#[cfg(feature = "client")]
 #[macro_use]
 extern crate yew;
 
