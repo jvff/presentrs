@@ -11,6 +11,8 @@ extern crate comrak;
 #[cfg(feature = "server")]
 #[macro_use]
 extern crate failure;
+#[cfg(feature = "server")]
+extern crate html5ever;
 
 #[cfg(feature = "client")]
 mod client;
