@@ -3,6 +3,9 @@ name = "presentrs"
 version = "0.1.0"
 authors = ["Janito Vaqueiro Ferreira Filho <janito.vff@gmail.com>"]
 
+[features]
+server = [ "actix-web", "failure" ]
+
 [dependencies]
-actix-web = "0.6"
-failure = "0.1"
+actix-web = { version = "0.6", optional = true }
+failure = { version = "0.1", optional = true }
