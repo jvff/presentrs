@@ -5,10 +5,11 @@ authors = ["Janito Vaqueiro Ferreira Filho <janito.vff@gmail.com>"]
 
 [features]
 client = [ "stdweb", "yew" ]
-server = [ "actix-web", "failure" ]
+server = [ "actix-web", "comrak", "failure" ]
 
 [dependencies]
 actix-web = { version = "0.6", optional = true }
+comrak = { version = "0.2", optional = true }
 failure = { version = "0.1", optional = true }
 stdweb = { version = "0.4", optional = true }
 yew = { git = "https://github.com/DenisKolodin/yew", optional = true }
