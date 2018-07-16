@@ -12,6 +12,8 @@ enum NotesStatus {
 
 pub enum Message {
     NotesLoaded(Option<String>),
+    PreviousSlide,
+    PreviousStep,
     NextSlide,
     NextStep,
 }
@@ -69,7 +71,19 @@ impl Component for Presentrs {
             Message::NotesLoaded(Some(notes)) => {
                 self.notes_status = NotesStatus::Ready(notes)
             }
-            Message::NextSlide => self.current_slide += 1,
+            Message::PreviousSlide => {
+                if self.current_slide > 1 {
+                    self.current_slide -= 1;
+                }
+                self.current_step = 1;
+            }
+            Message::PreviousStep => if self.current_step > 1 {
+                self.current_step -= 1;
+            },
+            Message::NextSlide => {
+                self.current_slide += 1;
+                self.current_step = 1;
+            }
             Message::NextStep => self.current_step += 1,
         }
         true
@@ -104,11 +118,17 @@ impl Renderable<Presentrs> for Presentrs {
                     }
                 }
                 <form onsubmit="return false;",>
-                    <button type="submit", onclick=|_| Message::NextSlide,>
-                        {"Next slide"}
+                    <button type="submit", onclick=|_| Message::PreviousSlide,>
+                        {"Previous slide"}
+                    </button>
+                    <button type="submit", onclick=|_| Message::PreviousStep,>
+                        {"Previous step"}
                     </button>
                     <button type="submit", onclick=|_| Message::NextStep,>
                         {"Next step"}
+                    </button>
+                    <button type="submit", onclick=|_| Message::NextSlide,>
+                        {"Next slide"}
                     </button>
                 </form>
             </div>
