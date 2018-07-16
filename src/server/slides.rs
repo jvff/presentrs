@@ -38,10 +38,10 @@ impl Slides {
         }
 
         let slide_count = *slide_map.keys().max().unwrap_or(&0);
-        let mut slides = vec![String::new(); slide_count];
+        let mut slides = vec![String::from("<div></div>"); slide_count];
 
         for (number, contents) in slide_map {
-            slides[number - 1] = contents;
+            slides[number - 1] = format!("<div>{}</div>", contents);
         }
 
         Ok(Slides { slides })
