@@ -14,6 +14,7 @@ use html5ever::{parse_document, serialize};
 #[derive(Debug)]
 pub struct Notes {
     output: String,
+    style: Option<String>,
 }
 
 impl Notes {
@@ -25,7 +26,10 @@ impl Notes {
         let html = markdown_to_html(&input, &ComrakOptions::default());
         let output = format!("<div>{}</div>", html);
 
-        Ok(Notes { output })
+        Ok(Notes {
+            output,
+            style: None,
+        })
     }
 
     pub fn animate_steps(&mut self) -> Result<&mut Self, NotesError> {
@@ -43,12 +47,26 @@ impl Notes {
 
         Self::animate_steps_on(&mut slide, &mut step, &mut body);
 
+        let mut style = String::new();
+
+        for i in 1..=slide {
+            for j in 1..=slide {
+                if i != j {
+                    style.push_str(&format!(
+                        "div.current-slide-{} .slide-{} {{ display: none; }}",
+                        i, j
+                    ));
+                }
+            }
+        }
+
         let mut output = Cursor::new(Vec::new());
 
         serialize(&mut output, body, SerializeOpts::default())
             .map_err(NotesError::AnimateStepsError)?;
 
         self.output = String::from_utf8_lossy(output.get_ref()).to_string();
+        self.style = Some(style);
 
         Ok(self)
     }
@@ -124,9 +142,16 @@ impl Notes {
         }
     }
 
-    pub fn generate_html(&self) -> Result<(), NotesError> {
+    pub fn generate_html(&mut self) -> Result<(), NotesError> {
         fs::write(PathBuf::from("static/notes.html"), &self.output)
-            .map_err(NotesError::GenerateHtmlError)
+            .map_err(NotesError::GenerateHtmlError)?;
+
+        if let Some(ref style) = self.style {
+            fs::write(PathBuf::from("static/notes.css"), &style)
+                .map_err(NotesError::GenerateHtmlError)
+        } else {
+            Ok(())
+        }
     }
 }
 
