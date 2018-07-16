@@ -99,8 +99,12 @@ impl Renderable<Slides> for Slides {
                         Status::Ready(ref contents) => {
                             match Node::from_html(contents) {
                                 Ok(contents) => VNode::VRef(contents),
-                                Err(_) => html! {
-                                    <p>{"Slide is not valid HTML"}</p>
+                                Err(error) => html! {
+                                    <p><strong>
+                                        {"Slide is not valid HTML"}
+                                    </strong></p>
+                                    <p>{format!("Error: {}", error)}</p>
+                                    <p>{format!("Contents: {}", contents)}</p>
                                 },
                             }
                         }
