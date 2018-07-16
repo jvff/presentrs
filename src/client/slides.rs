@@ -97,7 +97,7 @@ impl Renderable<Slides> for Slides {
                             <p>{"Loading slide"}</p>
                         },
                         Status::Ready(ref contents) => {
-                            match Node::from_html(contents) {
+                            match Node::from_html(contents.trim()) {
                                 Ok(contents) => VNode::VRef(contents),
                                 Err(error) => html! {
                                     <p><strong>

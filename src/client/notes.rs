@@ -83,7 +83,7 @@ impl Renderable<Notes> for Notes {
                             <p>{"Loading notes"}</p>
                         },
                         Status::Ready(ref notes) => {
-                            match Node::from_html(notes) {
+                            match Node::from_html(notes.trim()) {
                                 Ok(notes) => VNode::VRef(notes),
                                 Err(_) => html! {
                                     <p>{"Notes are not valid HTML"}</p>
