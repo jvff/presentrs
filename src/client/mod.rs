@@ -12,10 +12,12 @@ enum NotesStatus {
 
 pub enum Message {
     NotesLoaded(Option<String>),
+    NextSlide,
 }
 
 pub struct Presentrs {
     notes_status: NotesStatus,
+    current_slide: usize,
 }
 
 impl Component for Presentrs {
@@ -50,7 +52,10 @@ impl Component for Presentrs {
             notes_status = NotesStatus::LoadFailed;
         }
 
-        Presentrs { notes_status }
+        Presentrs {
+            notes_status,
+            current_slide: 1,
+        }
     }
 
     fn update(&mut self, message: Self::Message) -> ShouldRender {
@@ -61,6 +66,7 @@ impl Component for Presentrs {
             Message::NotesLoaded(Some(notes)) => {
                 self.notes_status = NotesStatus::Ready(notes)
             }
+            Message::NextSlide => self.current_slide += 1,
         }
         true
     }
@@ -69,7 +75,7 @@ impl Component for Presentrs {
 impl Renderable<Presentrs> for Presentrs {
     fn view(&self) -> Html<Self> {
         html! {
-            <div>
+            <div class={ format!("current-slide-{}", self.current_slide) },>
                 {
                     match self.notes_status {
                         NotesStatus::Loading(_) => html! {
@@ -88,6 +94,11 @@ impl Renderable<Presentrs> for Presentrs {
                         },
                     }
                 }
+                <form onsubmit="return false;",>
+                    <button type="submit", onclick=|_| Message::NextSlide,>
+                        {"Next slide"}
+                    </button>
+                </form>
             </div>
         }
     }
