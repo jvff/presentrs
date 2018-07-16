@@ -142,12 +142,20 @@ impl Notes {
         }
     }
 
-    pub fn generate_html(&mut self) -> Result<(), NotesError> {
-        fs::write(PathBuf::from("static/notes.html"), &self.output)
+    pub fn generate_html<P: AsRef<Path>>(
+        &mut self,
+        output_dir: P,
+    ) -> Result<(), NotesError> {
+        let output_dir = output_dir.as_ref();
+        let notes_html = output_dir.join("notes.html");
+
+        fs::write(PathBuf::from(notes_html), &self.output)
             .map_err(NotesError::GenerateHtmlError)?;
 
         if let Some(ref style) = self.style {
-            fs::write(PathBuf::from("static/notes.css"), &style)
+            let notes_css = output_dir.join("notes.css");
+
+            fs::write(PathBuf::from(notes_css), &style)
                 .map_err(NotesError::GenerateHtmlError)
         } else {
             Ok(())
