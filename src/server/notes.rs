@@ -101,7 +101,10 @@ impl Notes {
                 ref attrs,
                 ..
             } => {
-                if &name.local == "h2" || &name.local == "h3" {
+                if &name.local == "h1"
+                    || &name.local == "h2"
+                    || &name.local == "h3"
+                {
                     *slide += 1;
                     *step = 0;
                 } else if &name.local == "li" {
