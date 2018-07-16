@@ -1,6 +1,8 @@
 use std::collections::HashMap;
-use std::path::Path;
-use std::{fs, io};
+use std::ffi::OsStr;
+use std::fs::{self, DirEntry};
+use std::io;
+use std::path::{Path, PathBuf};
 
 use html5ever::driver::ParseOpts;
 use html5ever::interface::Attribute;
@@ -98,6 +100,45 @@ impl Slides {
             })
     }
 
+    pub fn load_from<P: AsRef<Path>>(
+        &mut self,
+        directory: P,
+    ) -> Result<(), SlidesError> {
+        let files: Vec<_> = fs::read_dir(directory)
+            .and_then(|entries| entries.collect())
+            .map_err(SlidesError::SlidesDirectoryError)?;
+
+        let slide_files = files.iter().filter_map(Self::parse_slide_path);
+
+        for (slide_number, slide_file) in slide_files {
+            let slide_contents =
+                fs::read_to_string(slide_file).map_err(SlidesError::LoadSlide)?;
+
+            if slide_number > self.slides.len() {
+                self.slides.resize(slide_number, String::new());
+            }
+
+            self.slides[slide_number - 1] = slide_contents;
+        }
+
+        Ok(())
+    }
+
+    fn parse_slide_path(dir_entry: &DirEntry) -> Option<(usize, PathBuf)> {
+        let path = dir_entry.path();
+
+        if path.extension() == Some(OsStr::new("html")) {
+            let slide_number = path
+                .file_stem()
+                .map(|stem| stem.to_string_lossy().parse())
+                .and_then(Result::ok);
+
+            slide_number.map(|number| (number, path.to_owned()))
+        } else {
+            None
+        }
+    }
+
     pub fn write_to<P: AsRef<Path>>(
         &self,
         output_dir: P,
@@ -121,6 +162,10 @@ impl Slides {
 pub enum SlidesError {
     #[fail(display = "Failed to parse slides from notes")]
     FromNotesError(#[cause] io::Error),
+    #[fail(display = "Failed to read slides from directory")]
+    SlidesDirectoryError(#[cause] io::Error),
+    #[fail(display = "Failed to read slide file")]
+    LoadSlide(#[cause] io::Error),
     #[fail(display = "Failed to write slide")]
     WriteError(#[cause] io::Error),
 }
