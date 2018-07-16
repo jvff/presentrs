@@ -1,10 +1,12 @@
 mod navigation;
 mod notes;
+mod slides;
 
 use yew::prelude::*;
 
 use self::navigation::Navigation;
 use self::notes::Notes;
+use self::slides::Slides;
 
 pub enum Message {
     PreviousSlide,
@@ -54,6 +56,10 @@ impl Renderable<Presentrs> for Presentrs {
     fn view(&self) -> Html<Self> {
         html! {
             <div>
+                <Slides:
+                    current_slide = self.current_slide,
+                    current_step = self.current_step,
+                    />
                 <Notes:
                     current_slide = self.current_slide,
                     current_step = self.current_step,
