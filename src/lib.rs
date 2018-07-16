@@ -22,4 +22,6 @@ pub use client::Presentrs;
 #[cfg(feature = "server")]
 mod server;
 #[cfg(feature = "server")]
-pub use server::{Notes, NotesError, Server, ServerStartError};
+pub use server::{
+    Notes, NotesError, Server, ServerStartError, Slides, SlidesError,
+};

@@ -178,6 +178,10 @@ impl Notes {
             Ok(())
         }
     }
+
+    pub(crate) fn html_str(&self) -> &str {
+        &self.output
+    }
 }
 
 #[derive(Debug, Fail)]
