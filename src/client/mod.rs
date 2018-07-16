@@ -1,7 +1,9 @@
+mod navigation;
 mod notes;
 
 use yew::prelude::*;
 
+use self::navigation::Navigation;
 use self::notes::Notes;
 
 pub enum Message {
@@ -38,11 +40,11 @@ impl Component for Presentrs {
             Message::PreviousStep => if self.current_step > 1 {
                 self.current_step -= 1;
             },
+            Message::NextStep => self.current_step += 1,
             Message::NextSlide => {
                 self.current_slide += 1;
                 self.current_step = 1;
             }
-            Message::NextStep => self.current_step += 1,
         }
         true
     }
@@ -56,20 +58,12 @@ impl Renderable<Presentrs> for Presentrs {
                     current_slide = self.current_slide,
                     current_step = self.current_step,
                     />
-                <form onsubmit="return false;",>
-                    <button type="submit", onclick=|_| Message::PreviousSlide,>
-                        {"Previous slide"}
-                    </button>
-                    <button type="submit", onclick=|_| Message::PreviousStep,>
-                        {"Previous step"}
-                    </button>
-                    <button type="submit", onclick=|_| Message::NextStep,>
-                        {"Next step"}
-                    </button>
-                    <button type="submit", onclick=|_| Message::NextSlide,>
-                        {"Next slide"}
-                    </button>
-                </form>
+                <Navigation:
+                    on_previous_slide = |_| Message::PreviousSlide,
+                    on_previous_step = |_| Message::PreviousStep,
+                    on_next_step = |_| Message::NextStep,
+                    on_next_slide = |_| Message::NextSlide,
+                    />
             </div>
         }
     }
