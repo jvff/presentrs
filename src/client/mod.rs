@@ -13,11 +13,13 @@ enum NotesStatus {
 pub enum Message {
     NotesLoaded(Option<String>),
     NextSlide,
+    NextStep,
 }
 
 pub struct Presentrs {
     notes_status: NotesStatus,
     current_slide: usize,
+    current_step: usize,
 }
 
 impl Component for Presentrs {
@@ -55,6 +57,7 @@ impl Component for Presentrs {
         Presentrs {
             notes_status,
             current_slide: 1,
+            current_step: 1,
         }
     }
 
@@ -67,6 +70,7 @@ impl Component for Presentrs {
                 self.notes_status = NotesStatus::Ready(notes)
             }
             Message::NextSlide => self.current_slide += 1,
+            Message::NextStep => self.current_step += 1,
         }
         true
     }
@@ -75,7 +79,12 @@ impl Component for Presentrs {
 impl Renderable<Presentrs> for Presentrs {
     fn view(&self) -> Html<Self> {
         html! {
-            <div class={ format!("current-slide-{}", self.current_slide) },>
+            <div class={
+                format!(
+                    "current-slide-{} current-slide-step-{}",
+                    self.current_slide, self.current_step
+                )
+            },>
                 {
                     match self.notes_status {
                         NotesStatus::Loading(_) => html! {
@@ -97,6 +106,9 @@ impl Renderable<Presentrs> for Presentrs {
                 <form onsubmit="return false;",>
                     <button type="submit", onclick=|_| Message::NextSlide,>
                         {"Next slide"}
+                    </button>
+                    <button type="submit", onclick=|_| Message::NextStep,>
+                        {"Next step"}
                     </button>
                 </form>
             </div>

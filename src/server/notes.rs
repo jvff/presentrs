@@ -60,6 +60,23 @@ impl Notes {
             }
         }
 
+        for i in 1..=20 {
+            for j in 1..=20 {
+                style.push_str(&format!(
+                    "div.current-slide-step-{} .slide-step-{} ",
+                    i, j
+                ));
+
+                if i == j {
+                    style.push_str("{ color: black; visibility: visible; }");
+                } else if i > j {
+                    style.push_str("{ color: lightgray; }");
+                } else if i < j {
+                    style.push_str("{ visibility: hidden; }");
+                }
+            }
+        }
+
         let mut output = Cursor::new(Vec::new());
 
         serialize(&mut output, body, SerializeOpts::default())
