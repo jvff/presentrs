@@ -94,7 +94,7 @@ impl Renderable<Slides> for Slides {
     fn view(&self) -> Html<Self> {
         html! {
             <div
-                id={"slide-container"},
+                id={"slide"},
                 style={ self.size.to_string() },
                 class={ format!("current-slide-step-{}", self.current_step) },
             >
