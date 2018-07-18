@@ -1,5 +1,6 @@
 mod navigation;
 mod notes;
+mod slide_size;
 mod slides;
 
 use yew::prelude::*;

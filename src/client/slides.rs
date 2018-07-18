@@ -5,6 +5,8 @@ use yew::prelude::*;
 use yew::services::fetch::{FetchService, FetchTask, Request, Response};
 use yew::virtual_dom::VNode;
 
+use super::slide_size::SlideSize;
+
 const SLIDE_WIDTH: f64 = 800.0;
 const SLIDE_HEIGHT: f64 = 600.0;
 
@@ -14,13 +16,7 @@ pub struct Slides {
     status: Status,
     fetch_service: FetchService,
     link: ComponentLink<Slides>,
-    scale: f64,
-    translate_x: f64,
-    translate_y: f64,
-    margin_left: f64,
-    margin_right: f64,
-    margin_top: f64,
-    margin_bottom: f64,
+    slide_size: SlideSize,
 }
 
 impl Slides {
@@ -58,27 +54,7 @@ impl Slides {
         let width = window.inner_width() as f64;
         let height = window.inner_height() as f64;
 
-        let scale_x = width / SLIDE_WIDTH;
-        let scale_y = height / SLIDE_HEIGHT;
-
-        self.scale = scale_x.min(scale_y);
-
-        let new_width = SLIDE_WIDTH * self.scale;
-        let new_height = SLIDE_HEIGHT * self.scale;
-
-        let delta_x = new_width - SLIDE_WIDTH;
-        let delta_y = new_height - SLIDE_HEIGHT;
-
-        self.translate_x = delta_x / 2.0;
-        self.translate_y = delta_y / 2.0;
-
-        let horizontal_margin = (width - new_width) / 2.0;
-        let vertical_margin = (height - new_height) / 2.0;
-
-        self.margin_left = horizontal_margin;
-        self.margin_right = horizontal_margin;
-        self.margin_top = vertical_margin;
-        self.margin_bottom = vertical_margin;
+        self.slide_size.resize_to_fit_in(width, height);
     }
 }
 
@@ -100,13 +76,7 @@ impl Component for Slides {
             status: Status::Error,
             fetch_service: FetchService::new(),
             link,
-            scale: 1.0,
-            translate_x: 0.0,
-            translate_y: 0.0,
-            margin_top: 0.0,
-            margin_bottom: 0.0,
-            margin_left: 0.0,
-            margin_right: 0.0,
+            slide_size: SlideSize::new(SLIDE_WIDTH, SLIDE_HEIGHT),
         };
 
         this.fetch_slide();
@@ -149,17 +119,7 @@ impl Renderable<Slides> for Slides {
         html! {
             <div
                 id={"slide-container"},
-                style={ format!(
-                    "width: {}px; height: {}px;
-                     transform: translate({}px, {}px) scale({});
-                     margin-top: {}px; margin-bottom: {}px;
-                     margin-left: {}px; margin-right: {}px;
-                     ",
-                     SLIDE_WIDTH, SLIDE_HEIGHT,
-                     self.translate_x, self.translate_y, self.scale,
-                     self.margin_top, self.margin_bottom,
-                     self.margin_left, self.margin_right,
-                )},
+                style={ self.slide_size.to_string() },
                 class={ format!("current-slide-step-{}", self.current_step) },
             >
                 {
