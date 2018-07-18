@@ -1,8 +1,12 @@
-use stdweb::web::Node;
+use stdweb::web::event::ResizeEvent;
+use stdweb::web::{self, IEventTarget, Node};
 use yew::format::{Nothing, Text};
 use yew::prelude::*;
 use yew::services::fetch::{FetchService, FetchTask, Request, Response};
 use yew::virtual_dom::VNode;
+
+const SLIDE_WIDTH: f64 = 800.0;
+const SLIDE_HEIGHT: f64 = 600.0;
 
 pub struct Slides {
     current_slide: usize,
@@ -10,6 +14,9 @@ pub struct Slides {
     status: Status,
     fetch_service: FetchService,
     link: ComponentLink<Slides>,
+    scale: f64,
+    translate_x: f64,
+    translate_y: f64,
 }
 
 impl Slides {
@@ -41,6 +48,26 @@ impl Slides {
             self.status = Status::Error;
         }
     }
+
+    fn resize(&mut self) {
+        let window = web::window();
+        let width = window.inner_width() as f64;
+        let height = window.inner_height() as f64;
+
+        let scale_x = width / SLIDE_WIDTH;
+        let scale_y = height / SLIDE_HEIGHT;
+
+        self.scale = scale_x.min(scale_y);
+
+        let new_width = SLIDE_WIDTH * self.scale;
+        let new_height = SLIDE_HEIGHT * self.scale;
+
+        let delta_x = new_width - SLIDE_WIDTH;
+        let delta_y = new_height - SLIDE_HEIGHT;
+
+        self.translate_x = delta_x / 2.0;
+        self.translate_y = delta_y / 2.0;
+    }
 }
 
 impl Component for Slides {
@@ -48,15 +75,26 @@ impl Component for Slides {
     type Message = Message;
 
     fn create(properties: Self::Properties, link: ComponentLink<Self>) -> Self {
+        let window = web::window();
+        let window_resize_callback = link.send_back(|_| Message::Resize);
+
+        window.add_event_listener(move |_: ResizeEvent| {
+            window_resize_callback.emit(());
+        });
+
         let mut this = Slides {
             current_slide: properties.current_slide,
             current_step: properties.current_step,
             status: Status::Error,
             fetch_service: FetchService::new(),
             link,
+            scale: 1.0,
+            translate_x: 0.0,
+            translate_y: 0.0,
         };
 
         this.fetch_slide();
+        this.resize();
         this
     }
 
@@ -67,6 +105,9 @@ impl Component for Slides {
             }
             Message::LoadComplete(Some(notes)) => {
                 self.status = Status::Ready(notes);
+            }
+            Message::Resize => {
+                self.resize();
             }
         }
         true
@@ -90,7 +131,16 @@ impl Component for Slides {
 impl Renderable<Slides> for Slides {
     fn view(&self) -> Html<Self> {
         html! {
-            <div class={ format!("current-slide-step-{}", self.current_step) },>
+            <div
+                id={"slide-container"},
+                style={ format!(
+                    "width: {}px; height: {}px;
+                     transform: translate({}px, {}px) scale({})",
+                     SLIDE_WIDTH, SLIDE_HEIGHT,
+                     self.translate_x, self.translate_y, self.scale,
+                )},
+                class={ format!("current-slide-step-{}", self.current_step) },
+            >
                 {
                     match self.status {
                         Status::Loading(_) => html! {
@@ -141,4 +191,5 @@ impl Default for Properties {
 
 pub enum Message {
     LoadComplete(Option<String>),
+    Resize,
 }
