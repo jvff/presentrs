@@ -17,6 +17,10 @@ pub struct Slides {
     scale: f64,
     translate_x: f64,
     translate_y: f64,
+    margin_left: f64,
+    margin_right: f64,
+    margin_top: f64,
+    margin_bottom: f64,
 }
 
 impl Slides {
@@ -67,6 +71,14 @@ impl Slides {
 
         self.translate_x = delta_x / 2.0;
         self.translate_y = delta_y / 2.0;
+
+        let horizontal_margin = (width - new_width) / 2.0;
+        let vertical_margin = (height - new_height) / 2.0;
+
+        self.margin_left = horizontal_margin;
+        self.margin_right = horizontal_margin;
+        self.margin_top = vertical_margin;
+        self.margin_bottom = vertical_margin;
     }
 }
 
@@ -91,6 +103,10 @@ impl Component for Slides {
             scale: 1.0,
             translate_x: 0.0,
             translate_y: 0.0,
+            margin_top: 0.0,
+            margin_bottom: 0.0,
+            margin_left: 0.0,
+            margin_right: 0.0,
         };
 
         this.fetch_slide();
@@ -135,9 +151,14 @@ impl Renderable<Slides> for Slides {
                 id={"slide-container"},
                 style={ format!(
                     "width: {}px; height: {}px;
-                     transform: translate({}px, {}px) scale({})",
+                     transform: translate({}px, {}px) scale({});
+                     margin-top: {}px; margin-bottom: {}px;
+                     margin-left: {}px; margin-right: {}px;
+                     ",
                      SLIDE_WIDTH, SLIDE_HEIGHT,
                      self.translate_x, self.translate_y, self.scale,
+                     self.margin_top, self.margin_bottom,
+                     self.margin_left, self.margin_right,
                 )},
                 class={ format!("current-slide-step-{}", self.current_step) },
             >
