@@ -33,7 +33,7 @@ impl SlideMeasure {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct SlideSize {
     original_width: f64,
     original_height: f64,
@@ -44,6 +44,12 @@ pub struct SlideSize {
     margin_bottom: f64,
     margin_left: f64,
     margin_right: f64,
+}
+
+impl Default for SlideSize {
+    fn default() -> Self {
+        SlideSize::new(1.0, 1.0)
+    }
 }
 
 impl SlideSize {

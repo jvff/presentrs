@@ -1,5 +1,5 @@
-use stdweb::web::event::ResizeEvent;
-use stdweb::web::{self, IEventTarget, Node};
+use stdweb::web::Node;
+
 use yew::format::{Nothing, Text};
 use yew::prelude::*;
 use yew::services::fetch::{FetchService, FetchTask, Request, Response};
@@ -7,16 +7,13 @@ use yew::virtual_dom::VNode;
 
 use super::slide_size::SlideSize;
 
-const SLIDE_WIDTH: f64 = 800.0;
-const SLIDE_HEIGHT: f64 = 600.0;
-
 pub struct Slides {
     current_slide: usize,
     current_step: usize,
     status: Status,
     fetch_service: FetchService,
     link: ComponentLink<Slides>,
-    slide_size: SlideSize,
+    size: SlideSize,
 }
 
 impl Slides {
@@ -48,14 +45,6 @@ impl Slides {
             self.status = Status::Error;
         }
     }
-
-    fn resize(&mut self) {
-        let window = web::window();
-        let width = window.inner_width() as f64;
-        let height = window.inner_height() as f64;
-
-        self.slide_size.resize_to_fit_in(width, height);
-    }
 }
 
 impl Component for Slides {
@@ -63,24 +52,16 @@ impl Component for Slides {
     type Message = Message;
 
     fn create(properties: Self::Properties, link: ComponentLink<Self>) -> Self {
-        let window = web::window();
-        let window_resize_callback = link.send_back(|_| Message::Resize);
-
-        window.add_event_listener(move |_: ResizeEvent| {
-            window_resize_callback.emit(());
-        });
-
         let mut this = Slides {
             current_slide: properties.current_slide,
             current_step: properties.current_step,
             status: Status::Error,
             fetch_service: FetchService::new(),
             link,
-            slide_size: SlideSize::new(SLIDE_WIDTH, SLIDE_HEIGHT),
+            size: properties.size,
         };
 
         this.fetch_slide();
-        this.resize();
         this
     }
 
@@ -92,25 +73,20 @@ impl Component for Slides {
             Message::LoadComplete(Some(notes)) => {
                 self.status = Status::Ready(notes);
             }
-            Message::Resize => {
-                self.resize();
-            }
         }
         true
     }
 
     fn change(&mut self, properties: Self::Properties) -> ShouldRender {
-        let mut changed = self.current_step != properties.current_step;
-
+        self.size = properties.size;
         self.current_step = properties.current_step;
 
         if self.current_slide != properties.current_slide {
             self.current_slide = properties.current_slide;
             self.fetch_slide();
-            changed = true;
         }
 
-        changed
+        true
     }
 }
 
@@ -119,7 +95,7 @@ impl Renderable<Slides> for Slides {
         html! {
             <div
                 id={"slide-container"},
-                style={ self.slide_size.to_string() },
+                style={ self.size.to_string() },
                 class={ format!("current-slide-step-{}", self.current_step) },
             >
                 {
@@ -159,6 +135,7 @@ pub enum Status {
 pub struct Properties {
     pub current_slide: usize,
     pub current_step: usize,
+    pub size: SlideSize,
 }
 
 impl Default for Properties {
@@ -166,11 +143,11 @@ impl Default for Properties {
         Properties {
             current_slide: 1,
             current_step: 1,
+            size: SlideSize::default(),
         }
     }
 }
 
 pub enum Message {
     LoadComplete(Option<String>),
-    Resize,
 }
