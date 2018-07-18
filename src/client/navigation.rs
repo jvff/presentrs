@@ -59,20 +59,28 @@ impl Component for Navigation {
 impl Renderable<Navigation> for Navigation {
     fn view(&self) -> Html<Self> {
         html! {
-            <form onsubmit="return false;",>
-                <button type="submit", onclick=|_| Message::PreviousSlide,>
-                    {"Previous slide"}
-                </button>
-                <button type="submit", onclick=|_| Message::PreviousStep,>
-                    {"Previous step"}
-                </button>
-                <button type="submit", onclick=|_| Message::NextStep,>
-                    {"Next step"}
-                </button>
-                <button type="submit", onclick=|_| Message::NextSlide,>
-                    {"Next slide"}
-                </button>
-            </form>
+            <div style={
+                "position: absolute;
+                 bottom: 0;
+                 width: 97%;"
+            },>
+                <form onsubmit="return false;", style={
+                    "margin-left: auto; margin-right: auto;"
+                },>
+                    <button type="submit", onclick=|_| Message::PreviousSlide,>
+                        {"Previous slide"}
+                    </button>
+                    <button type="submit", onclick=|_| Message::PreviousStep,>
+                        {"Previous step"}
+                    </button>
+                    <button type="submit", onclick=|_| Message::NextStep,>
+                        {"Next step"}
+                    </button>
+                    <button type="submit", onclick=|_| Message::NextSlide,>
+                        {"Next slide"}
+                    </button>
+                </form>
+            </div>
         }
     }
 }
