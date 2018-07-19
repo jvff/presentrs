@@ -13,6 +13,7 @@ pub struct Slides {
     fetch_service: FetchService,
     link: ComponentLink<Slides>,
     size: SlideSize,
+    on_slide_loaded: Option<Callback<usize>>,
 }
 
 impl Slides {
@@ -83,6 +84,7 @@ impl Component for Slides {
             fetch_service: FetchService::new(),
             link,
             size: properties.size,
+            on_slide_loaded: properties.on_slide_loaded,
         };
 
         this.fetch_slide();
@@ -94,8 +96,14 @@ impl Component for Slides {
             Message::LoadComplete(Ok(contents)) => {
                 match Slide::from_html(contents.trim()) {
                     Ok(slide) => {
+                        let num_steps = slide.num_steps();
+
                         self.status = Status::Ready(slide);
                         self.animate_slide();
+
+                        if let Some(ref callback) = self.on_slide_loaded {
+                            callback.emit(num_steps);
+                        }
                     }
                     Err(error) => {
                         self.status = Status::Error {
@@ -211,11 +219,12 @@ pub enum Status {
     },
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct Properties {
     pub current_slide: usize,
     pub current_step: usize,
     pub size: SlideSize,
+    pub on_slide_loaded: Option<Callback<usize>>,
 }
 
 impl Default for Properties {
@@ -224,6 +233,7 @@ impl Default for Properties {
             current_slide: 1,
             current_step: 1,
             size: SlideSize::default(),
+            on_slide_loaded: None,
         }
     }
 }

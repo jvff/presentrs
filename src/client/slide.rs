@@ -64,6 +64,10 @@ impl Slide {
             .clone_node(CloneKind::Deep)
             .map_err(|_| "Failed to clone node tree".to_owned())
     }
+
+    pub fn num_steps(&self) -> usize {
+        self.num_steps
+    }
 }
 
 #[derive(Clone, Debug)]
