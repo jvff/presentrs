@@ -1,5 +1,11 @@
 use std::fmt::{self, Display, Formatter};
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum Direction {
+    Horizontal,
+    Vertical,
+}
+
 #[derive(Clone, Copy, Debug)]
 pub struct SlideMeasure {
     container_width: f64,
@@ -7,6 +13,7 @@ pub struct SlideMeasure {
     width: f64,
     height: f64,
     scale: f64,
+    unfilled_direction: Direction,
 }
 
 impl SlideMeasure {
@@ -19,6 +26,11 @@ impl SlideMeasure {
         let scale_y = container_height / slide.original_height;
 
         let scale = scale_x.min(scale_y);
+        let unfilled_direction = if scale == scale_x {
+            Direction::Vertical
+        } else {
+            Direction::Horizontal
+        };
 
         let width = slide.original_width * scale;
         let height = slide.original_height * scale;
@@ -29,6 +41,7 @@ impl SlideMeasure {
             width,
             height,
             scale,
+            unfilled_direction,
         }
     }
 }
@@ -44,6 +57,7 @@ pub struct SlideSize {
     margin_bottom: f64,
     margin_left: f64,
     margin_right: f64,
+    unfilled_direction: Direction,
 }
 
 impl Default for SlideSize {
@@ -64,6 +78,7 @@ impl SlideSize {
             margin_bottom: 0.0,
             margin_left: 0.0,
             margin_right: 0.0,
+            unfilled_direction: Direction::Horizontal,
         }
     }
 
@@ -93,11 +108,15 @@ impl SlideSize {
         self.margin_right = horizontal_margin;
         self.margin_top = vertical_margin;
         self.margin_bottom = vertical_margin;
+        self.unfilled_direction = measure.unfilled_direction;
     }
 }
 
 impl Display for SlideSize {
     fn fmt(&self, formatter: &mut Formatter) -> fmt::Result {
+        write!(formatter, " position: absolute;")?;
+        write!(formatter, " top: 0;")?;
+        write!(formatter, " left: 0;")?;
         write!(formatter, " width: {}px;", self.original_width)?;
         write!(formatter, " height: {}px;", self.original_height)?;
         write!(
@@ -105,10 +124,18 @@ impl Display for SlideSize {
             " transform: translate({}px, {}px) scale({});",
             self.translate_x, self.translate_y, self.scale,
         )?;
-        write!(formatter, " margin-top: {}px;", self.margin_top)?;
-        write!(formatter, " margin-bottom: {}px;", self.margin_bottom)?;
-        write!(formatter, " margin-left: {}px;", self.margin_left)?;
-        write!(formatter, " margin-right: {}px;", self.margin_right)?;
+
+        if self.unfilled_direction == Direction::Vertical {
+            write!(formatter, " margin-top: {}px;", self.margin_top)?;
+            write!(formatter, " margin-bottom: {}px;", self.margin_bottom)?;
+            write!(formatter, " margin-left: auto;")?;
+            write!(formatter, " margin-right: auto;")?;
+        } else {
+            write!(formatter, " margin-top: auto;")?;
+            write!(formatter, " margin-bottom: auto;")?;
+            write!(formatter, " margin-left: {}px;", self.margin_left)?;
+            write!(formatter, " margin-right: {}px;", self.margin_right)?;
+        }
 
         Ok(())
     }

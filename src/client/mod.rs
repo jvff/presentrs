@@ -39,8 +39,7 @@ impl Presentrs {
         let width = window.inner_width() as f64;
         let height = window.inner_height() as f64;
 
-        self.slide_size
-            .resize_to_fit_in(width * 0.98, height * 0.98);
+        self.slide_size.resize_to_fit_in(width, height);
     }
 
     fn on_key_down(event: KeyDownEvent) -> Message {
