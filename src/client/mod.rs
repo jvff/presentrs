@@ -21,6 +21,7 @@ const SLIDE_WIDTH: f64 = 800.0;
 const SLIDE_HEIGHT: f64 = 600.0;
 
 pub enum Message {
+    ToggleNotes,
     SlideLoaded(usize),
     FirstSlide,
     PreviousSlide,
@@ -36,6 +37,7 @@ pub struct Presentrs {
     current_step: usize,
     current_slide_steps: Option<usize>,
     slide_size: SlideSize,
+    show_notes: bool,
 }
 
 impl Presentrs {
@@ -54,6 +56,7 @@ impl Presentrs {
             "ArrowUp" => Message::PreviousSlide,
             "ArrowDown" => Message::NextSlide,
             "Home" => Message::FirstSlide,
+            "n" => Message::ToggleNotes,
             _ => return Message::Ignore,
         };
 
@@ -80,6 +83,7 @@ impl Component for Presentrs {
             current_step: 1,
             current_slide_steps: None,
             slide_size: SlideSize::new(SLIDE_WIDTH, SLIDE_HEIGHT),
+            show_notes: false,
         };
 
         this.resize();
@@ -88,6 +92,9 @@ impl Component for Presentrs {
 
     fn update(&mut self, message: Self::Message) -> ShouldRender {
         match message {
+            Message::ToggleNotes => {
+                self.show_notes = !self.show_notes;
+            }
             Message::SlideLoaded(num_steps) => {
                 self.current_slide_steps = Some(num_steps.max(1));
 
@@ -165,6 +172,7 @@ impl Renderable<Presentrs> for Presentrs {
                 <Notes:
                     current_slide = self.current_slide,
                     current_step = self.current_step,
+                    enabled = self.show_notes,
                     />
                 <Navigation:
                     on_previous_slide = |_| Message::PreviousSlide,

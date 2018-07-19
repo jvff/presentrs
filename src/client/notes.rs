@@ -7,6 +7,7 @@ use yew::virtual_dom::VNode;
 pub struct Notes {
     current_slide: usize,
     current_step: usize,
+    enabled: bool,
     status: Status,
 }
 
@@ -45,6 +46,7 @@ impl Component for Notes {
         Notes {
             current_slide: properties.current_slide,
             current_step: properties.current_step,
+            enabled: properties.enabled,
             status,
         }
     }
@@ -64,38 +66,43 @@ impl Component for Notes {
     fn change(&mut self, properties: Self::Properties) -> ShouldRender {
         self.current_slide = properties.current_slide;
         self.current_step = properties.current_step;
+        self.enabled = properties.enabled;
         true
     }
 }
 
 impl Renderable<Notes> for Notes {
     fn view(&self) -> Html<Self> {
-        html! {
-            <div class={
-                format!(
-                    "current-slide-{} current-slide-step-{}",
-                    self.current_slide, self.current_step
-                )
-            },>
-                {
-                    match self.status {
-                        Status::Loading(_) => html! {
-                            <p>{"Loading notes"}</p>
-                        },
-                        Status::Ready(ref notes) => {
-                            match Node::from_html(notes.trim()) {
-                                Ok(notes) => VNode::VRef(notes),
-                                Err(_) => html! {
-                                    <p>{"Notes are not valid HTML"}</p>
-                                },
+        if self.enabled {
+            html! {
+                <div class={
+                    format!(
+                        "current-slide-{} current-slide-step-{}",
+                        self.current_slide, self.current_step
+                    )
+                },>
+                    {
+                        match self.status {
+                            Status::Loading(_) => html! {
+                                <p>{"Loading notes"}</p>
+                            },
+                            Status::Ready(ref notes) => {
+                                match Node::from_html(notes.trim()) {
+                                    Ok(notes) => VNode::VRef(notes),
+                                    Err(_) => html! {
+                                        <p>{"Notes are not valid HTML"}</p>
+                                    },
+                                }
                             }
+                            Status::Error => html! {
+                                <p>{"Failed to load notes"}</p>
+                            },
                         }
-                        Status::Error => html! {
-                            <p>{"Failed to load notes"}</p>
-                        },
                     }
-                }
-            </div>
+                </div>
+            }
+        } else {
+            html!(<div style={"display: none"},></div>)
         }
     }
 }
@@ -110,6 +117,7 @@ pub enum Status {
 pub struct Properties {
     pub current_slide: usize,
     pub current_step: usize,
+    pub enabled: bool,
 }
 
 impl Default for Properties {
@@ -117,6 +125,7 @@ impl Default for Properties {
         Properties {
             current_slide: 1,
             current_step: 1,
+            enabled: false,
         }
     }
 }
