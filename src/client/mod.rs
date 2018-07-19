@@ -3,6 +3,7 @@ mod notes;
 mod slide_size;
 mod slides;
 
+use stdweb::traits::IEvent;
 use stdweb::web::event::ResizeEvent;
 use stdweb::web::{self, IEventTarget};
 
@@ -42,14 +43,18 @@ impl Presentrs {
     }
 
     fn on_key_down(event: KeyDownEvent) -> Message {
-        match event.key().as_str() {
+        let message = match event.key().as_str() {
             "ArrowLeft" | "PageUp" => Message::PreviousStep,
             "ArrowRight" | "PageDown" => Message::NextStep,
             "ArrowUp" => Message::PreviousSlide,
             "ArrowDown" => Message::NextSlide,
             "Home" => Message::FirstSlide,
-            _ => Message::Ignore,
-        }
+            _ => return Message::Ignore,
+        };
+
+        event.prevent_default();
+
+        message
     }
 }
 
