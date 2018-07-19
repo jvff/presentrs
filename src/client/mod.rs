@@ -3,7 +3,6 @@ mod notes;
 mod slide_size;
 mod slides;
 
-use stdweb::traits::IEvent;
 use stdweb::web::event::ResizeEvent;
 use stdweb::web::{self, IEventTarget};
 
@@ -24,6 +23,7 @@ pub enum Message {
     NextSlide,
     NextStep,
     Resize,
+    Ignore,
 }
 
 pub struct Presentrs {
@@ -41,14 +41,14 @@ impl Presentrs {
         self.slide_size.resize_to_fit_in(width, height);
     }
 
-    fn on_key_down(event: &KeyDownEvent) -> Option<Message> {
+    fn on_key_down(event: KeyDownEvent) -> Message {
         match event.key().as_str() {
-            "ArrowLeft" | "PageUp" => Some(Message::PreviousStep),
-            "ArrowRight" | "PageDown" => Some(Message::NextStep),
-            "ArrowUp" => Some(Message::PreviousSlide),
-            "ArrowDown" => Some(Message::NextSlide),
-            "Home" => Some(Message::FirstSlide),
-            _ => None,
+            "ArrowLeft" | "PageUp" => Message::PreviousStep,
+            "ArrowRight" | "PageDown" => Message::NextStep,
+            "ArrowUp" => Message::PreviousSlide,
+            "ArrowDown" => Message::NextSlide,
+            "Home" => Message::FirstSlide,
+            _ => Message::Ignore,
         }
     }
 }
@@ -60,17 +60,9 @@ impl Component for Presentrs {
     fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
         let window = web::window();
         let window_resize_callback = link.send_back(|_| Message::Resize);
-        let window_key_down_callback = link.send_back(|message| message);
 
         window.add_event_listener(move |_: ResizeEvent| {
             window_resize_callback.emit(());
-        });
-
-        window.add_event_listener(move |event| {
-            if let Some(message) = Self::on_key_down(&event) {
-                event.stop_propagation();
-                window_key_down_callback.emit(message);
-            }
         });
 
         let mut this = Presentrs {
@@ -104,6 +96,7 @@ impl Component for Presentrs {
                 self.current_step = 1;
             }
             Message::Resize => self.resize(),
+            Message::Ignore => return false,
         }
         true
     }
@@ -112,7 +105,10 @@ impl Component for Presentrs {
 impl Renderable<Presentrs> for Presentrs {
     fn view(&self) -> Html<Self> {
         html! {
-            <div>
+            <div
+                tabindex = 0,
+                onkeydown = |event| Self::on_key_down(event),
+                >
                 <Slides:
                     current_slide = self.current_slide,
                     current_step = self.current_step,
