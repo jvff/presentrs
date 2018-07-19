@@ -1,4 +1,5 @@
-use stdweb::web::Node;
+use stdweb::unstable::TryFrom as StdWebTryFrom;
+use stdweb::web::{CloneKind, Element, IElement, INode, Node};
 
 use yew::format::{Nothing, Text};
 use yew::prelude::*;
@@ -22,28 +23,134 @@ impl Slides {
             Request::get(format!("/slides/{}.html", self.current_slide))
                 .body(Nothing);
 
-        if let Ok(request) = request {
-            let fetch_task = self.fetch_service.fetch(
-                request,
-                self.link.send_back(|response: Response<Text>| {
-                    let (meta, body) = response.into_parts();
+        match request {
+            Ok(request) => {
+                let fetch_task = self.fetch_service.fetch(
+                    request,
+                    self.link.send_back(|response: Response<Text>| {
+                        let (meta, body) = response.into_parts();
 
-                    if meta.status.is_success() {
-                        if let Ok(contents) = body {
-                            Message::LoadComplete(Some(contents))
+                        if meta.status.is_success() {
+                            match body {
+                                Ok(contents) => {
+                                    Message::LoadComplete(Ok(contents))
+                                }
+                                Err(error) => Message::LoadComplete(Err(
+                                    error.to_string()
+                                )),
+                            }
                         } else {
-                            Message::LoadComplete(None)
+                            Message::LoadComplete(Err(format!(
+                                "Get error: {}",
+                                meta.status
+                            )))
                         }
-                    } else {
-                        Message::LoadComplete(None)
-                    }
-                }),
-            );
+                    }),
+                );
 
-            self.status = Status::Loading(fetch_task);
-        } else {
-            self.status = Status::Error;
+                self.status = Status::Loading(fetch_task);
+            }
+            Err(error) => {
+                self.status = Status::Error {
+                    description: "Failed to download slide",
+                    cause: Some(error.to_string()),
+                    contents: None,
+                };
+            }
         }
+    }
+
+    fn animated_slide(&self, slide: &Node) -> Node {
+        let slide = slide.clone_node(CloneKind::Deep).unwrap_or_else(|error| {
+            Node::from_html(&format!(
+                "<div>
+                    <p><strong>Internal error</strong></p>
+                    <p>Failed to animate slide</p>
+                    <p>Error: {}</p>
+                </div>",
+                error
+            )).expect("Failed to create error HTML fragment")
+        });
+
+        self.animate_element(slide.clone());
+
+        slide
+    }
+
+    fn animate_element(&self, node: Node) {
+        let maybe_element: Result<Element, _> =
+            StdWebTryFrom::try_from(node.clone());
+
+        if let Ok(element) = maybe_element {
+            if let Some(steps) = element.get_attribute("data-slide-steps") {
+                let mut class = element
+                    .get_attribute("class")
+                    .map(|mut class| {
+                        if !class.ends_with(' ') {
+                            class.push(' ')
+                        }
+                        class
+                    })
+                    .unwrap_or_else(|| String::new());
+
+                if self.includes_current_step(steps.trim()) {
+                    class.push_str("active-in-slide-step");
+                } else {
+                    class.push_str("inactive-in-slide-step");
+                }
+
+                let _ = element.set_attribute("class", &class);
+            }
+        }
+
+        for child in node.child_nodes().iter() {
+            self.animate_element(child);
+        }
+    }
+
+    fn includes_current_step(&self, step_spec: &str) -> bool {
+        for range in step_spec.split(',') {
+            let (maybe_first, maybe_last): (
+                Option<usize>,
+                Option<usize>,
+            ) = if range == "-" {
+                (Some(1), Some(::std::usize::MAX))
+            } else if range.starts_with('-') {
+                let last = range
+                    .split('-')
+                    .last()
+                    .and_then(|step: &str| step.parse().ok());
+
+                (Some(1), last)
+            } else if range.ends_with('-') {
+                let first = range
+                    .split('-')
+                    .next()
+                    .and_then(|step: &str| step.parse().ok());
+
+                (first, Some(::std::usize::MAX))
+            } else if range.contains('-') {
+                let mut steps = range.split('-');
+                let first =
+                    steps.next().and_then(|step: &str| step.parse().ok());
+                let last =
+                    steps.last().and_then(|step: &str| step.parse().ok());
+
+                (first, last)
+            } else {
+                let step = range.parse().ok();
+
+                (step, step)
+            };
+
+            if let (Some(first), Some(last)) = (maybe_first, maybe_last) {
+                if first <= self.current_step && last >= self.current_step {
+                    return true;
+                }
+            }
+        }
+
+        false
     }
 }
 
@@ -52,10 +159,16 @@ impl Component for Slides {
     type Message = Message;
 
     fn create(properties: Self::Properties, link: ComponentLink<Self>) -> Self {
+        let status = Status::Error {
+            description: "Starting",
+            cause: None,
+            contents: None,
+        };
+
         let mut this = Slides {
             current_slide: properties.current_slide,
             current_step: properties.current_step,
-            status: Status::Error,
+            status,
             fetch_service: FetchService::new(),
             link,
             size: properties.size,
@@ -67,11 +180,24 @@ impl Component for Slides {
 
     fn update(&mut self, message: Self::Message) -> ShouldRender {
         match message {
-            Message::LoadComplete(None) => {
-                self.status = Status::Error;
+            Message::LoadComplete(Ok(contents)) => {
+                match Node::from_html(contents.trim()) {
+                    Ok(node) => self.status = Status::Ready(node),
+                    Err(error) => {
+                        self.status = Status::Error {
+                            description: "Slide is not valid HTML",
+                            cause: Some(error.to_string()),
+                            contents: Some(contents),
+                        };
+                    }
+                }
             }
-            Message::LoadComplete(Some(notes)) => {
-                self.status = Status::Ready(notes);
+            Message::LoadComplete(Err(error)) => {
+                self.status = Status::Error {
+                    description: "Failed to download slide",
+                    cause: Some(error),
+                    contents: None,
+                };
             }
         }
         true
@@ -104,20 +230,42 @@ impl Renderable<Slides> for Slides {
                             <p>{"Loading slide"}</p>
                         },
                         Status::Ready(ref contents) => {
-                            match Node::from_html(contents.trim()) {
-                                Ok(contents) => VNode::VRef(contents),
-                                Err(error) => html! {
-                                    <p><strong>
-                                        {"Slide is not valid HTML"}
-                                    </strong></p>
-                                    <p>{format!("Error: {}", error)}</p>
-                                    <p>{format!("Contents: {}", contents)}</p>
-                                },
+                            VNode::VRef(self.animated_slide(contents))
+                        }
+                        Status::Error {
+                            description,
+                            ref cause,
+                            ref contents,
+                        } => {
+                            html! {
+                                <div>
+                                    <p><strong>{description}</strong></p>
+                                    {
+                                        if let Some(cause) = cause {
+                                            html! {
+                                                <p>{
+                                                    format!("Error: {}", cause)
+                                                }</p>
+                                            }
+                                        } else {
+                                            html!{}
+                                        }
+                                    }
+                                    {
+                                        if let Some(contents) = contents {
+                                            html! {
+                                                <p>{ format!(
+                                                    "Contents: {}",
+                                                    contents,
+                                                )}</p>
+                                            }
+                                        } else {
+                                            html!{}
+                                        }
+                                    }
+                                </div>
                             }
                         }
-                        Status::Error => html! {
-                            <p>{"Failed to load slide"}</p>
-                        },
                     }
                 }
             </div>
@@ -127,8 +275,12 @@ impl Renderable<Slides> for Slides {
 
 pub enum Status {
     Loading(FetchTask),
-    Ready(String),
-    Error,
+    Ready(Node),
+    Error {
+        description: &'static str,
+        cause: Option<String>,
+        contents: Option<String>,
+    },
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -149,5 +301,5 @@ impl Default for Properties {
 }
 
 pub enum Message {
-    LoadComplete(Option<String>),
+    LoadComplete(Result<String, String>),
 }
