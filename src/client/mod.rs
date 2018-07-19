@@ -113,6 +113,13 @@ impl Renderable<Presentrs> for Presentrs {
             <div
                 tabindex = 0,
                 onkeydown = |event| Self::on_key_down(event),
+                style = {"
+                    position: absolute;
+                    left: 0;
+                    right: 0;
+                    top: 0;
+                    bottom: 0;
+                "},
                 >
                 <Slides:
                     current_slide = self.current_slide,
