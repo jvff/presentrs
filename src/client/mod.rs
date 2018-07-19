@@ -18,6 +18,7 @@ const SLIDE_WIDTH: f64 = 800.0;
 const SLIDE_HEIGHT: f64 = 600.0;
 
 pub enum Message {
+    FirstSlide,
     PreviousSlide,
     PreviousStep,
     NextSlide,
@@ -46,6 +47,7 @@ impl Presentrs {
             "ArrowRight" | "PageDown" => Some(Message::NextStep),
             "ArrowUp" => Some(Message::PreviousSlide),
             "ArrowDown" => Some(Message::NextSlide),
+            "Home" => Some(Message::FirstSlide),
             _ => None,
         }
     }
@@ -83,6 +85,10 @@ impl Component for Presentrs {
 
     fn update(&mut self, message: Self::Message) -> ShouldRender {
         match message {
+            Message::FirstSlide => {
+                self.current_slide = 1;
+                self.current_step = 1;
+            }
             Message::PreviousSlide => {
                 if self.current_slide > 1 {
                     self.current_slide -= 1;
