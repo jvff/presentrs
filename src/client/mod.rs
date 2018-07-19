@@ -3,6 +3,7 @@ mod notes;
 mod slide_size;
 mod slides;
 
+use stdweb::traits::IEvent;
 use stdweb::web::event::ResizeEvent;
 use stdweb::web::{self, IEventTarget};
 
@@ -38,6 +39,16 @@ impl Presentrs {
 
         self.slide_size.resize_to_fit_in(width, height);
     }
+
+    fn on_key_down(event: &KeyDownEvent) -> Option<Message> {
+        match event.key().as_str() {
+            "ArrowLeft" | "PageUp" => Some(Message::PreviousStep),
+            "ArrowRight" | "PageDown" => Some(Message::NextStep),
+            "ArrowUp" => Some(Message::PreviousSlide),
+            "ArrowDown" => Some(Message::NextSlide),
+            _ => None,
+        }
+    }
 }
 
 impl Component for Presentrs {
@@ -47,9 +58,17 @@ impl Component for Presentrs {
     fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
         let window = web::window();
         let window_resize_callback = link.send_back(|_| Message::Resize);
+        let window_key_down_callback = link.send_back(|message| message);
 
         window.add_event_listener(move |_: ResizeEvent| {
             window_resize_callback.emit(());
+        });
+
+        window.add_event_listener(move |event| {
+            if let Some(message) = Self::on_key_down(&event) {
+                event.stop_propagation();
+                window_key_down_callback.emit(message);
+            }
         });
 
         let mut this = Presentrs {
