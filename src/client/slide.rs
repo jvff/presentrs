@@ -1,5 +1,5 @@
-use std::cmp;
 use std::collections::HashSet;
+use std::{self, cmp};
 
 use stdweb::unstable::TryFrom as StdWebTryFrom;
 use stdweb::web::{CloneKind, Element, IElement, INode, Node};
@@ -75,7 +75,7 @@ struct AnimatedElement {
     element: Element,
     class: Option<String>,
     steps: HashSet<usize>,
-    shown_till_end: bool,
+    always_show_after: Option<usize>,
     last_known_step: usize,
 }
 
@@ -90,25 +90,27 @@ impl AnimatedElement {
             });
 
             let mut steps = HashSet::new();
+            let mut always_show_after = None;
             let mut last_known_step = 0;
-            let mut shown_till_end = false;
 
             for range in Self::step_ranges(step_spec.trim()) {
                 match range {
                     (Some(start), Some(end)) => {
-                        for step in start..end {
+                        for step in start..=end {
                             steps.insert(step);
                         }
 
                         last_known_step = cmp::max(last_known_step, end);
                     }
                     (Some(start), None) => {
-                        for step in start..last_known_step {
-                            steps.insert(step);
-                        }
+                        steps.insert(start);
 
                         last_known_step = cmp::max(last_known_step, start);
-                        shown_till_end = true;
+
+                        let previous_start =
+                            always_show_after.take().unwrap_or(std::usize::MAX);
+                        always_show_after =
+                            Some(cmp::min(start, previous_start));
                     }
                     (None, Some(end)) => {
                         for step in 1..end {
@@ -125,7 +127,7 @@ impl AnimatedElement {
                 element,
                 class,
                 steps,
-                shown_till_end,
+                always_show_after,
                 last_known_step,
             })
         } else {
@@ -198,8 +200,11 @@ impl AnimatedElement {
     }
 
     pub fn is_shown_in_step(&mut self, step: usize) -> bool {
-        self.steps.contains(&step)
-            || (step >= self.last_known_step && self.shown_till_end)
+        if let Some(always_show_after) = self.always_show_after {
+            step >= always_show_after || self.steps.contains(&step)
+        } else {
+            self.steps.contains(&step)
+        }
     }
 
     pub fn last_known_step(&self) -> usize {
