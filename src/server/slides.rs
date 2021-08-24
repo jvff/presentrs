@@ -7,10 +7,10 @@ use std::path::{Path, PathBuf};
 use derive_more::{Display, Error};
 use html5ever::driver::ParseOpts;
 use html5ever::interface::Attribute;
-use html5ever::rcdom::{Handle, NodeData, RcDom};
 use html5ever::serialize::{SerializeOpts, TraversalScope};
 use html5ever::tendril::TendrilSink;
 use html5ever::{parse_document, serialize};
+use markup5ever_arcdom::{ArcDom, Handle, NodeData, SerializableHandle};
 
 use super::notes::Notes;
 
@@ -21,7 +21,7 @@ pub struct Slides {
 impl Slides {
     pub fn from_notes(notes: &Notes) -> Result<Slides, SlidesError> {
         let html = notes.html_str().clone();
-        let html_dom = parse_document(RcDom::default(), ParseOpts::default())
+        let html_dom = parse_document(ArcDom::default(), ParseOpts::default())
             .from_utf8()
             .read_from(&mut html.as_bytes())
             .map_err(SlidesError::FromNotesError)?;
@@ -63,8 +63,12 @@ impl Slides {
                         ..SerializeOpts::default()
                     };
 
-                    serialize(&mut slide, node, options)
-                        .map_err(SlidesError::FromNotesError)?;
+                    serialize(
+                        &mut slide,
+                        &SerializableHandle::from(node.clone()),
+                        options,
+                    )
+                    .map_err(SlidesError::FromNotesError)?;
 
                     let slide_string = String::from_utf8_lossy(&slide);
 
@@ -112,8 +116,8 @@ impl Slides {
         let slide_files = files.iter().filter_map(Self::parse_slide_path);
 
         for (slide_number, slide_file) in slide_files {
-            let slide_contents =
-                fs::read_to_string(slide_file).map_err(SlidesError::LoadSlide)?;
+            let slide_contents = fs::read_to_string(slide_file)
+                .map_err(SlidesError::LoadSlide)?;
 
             if slide_number > self.slides.len() {
                 self.slides.resize(slide_number, String::new());

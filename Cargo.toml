@@ -6,3 +6,5 @@ edition = "2018"
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
 derive_more = "0.99"
+html5ever = "0.25"
+markup5ever_arcdom = "0.1"

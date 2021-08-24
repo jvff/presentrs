@@ -7,10 +7,10 @@ use comrak::{markdown_to_html, ComrakOptions};
 use derive_more::{Display, Error};
 use html5ever::driver::ParseOpts;
 use html5ever::interface::{Attribute, QualName};
-use html5ever::rcdom::{Handle, NodeData, RcDom};
 use html5ever::serialize::SerializeOpts;
 use html5ever::tendril::TendrilSink;
 use html5ever::{parse_document, serialize};
+use markup5ever_arcdom::{ArcDom, Handle, NodeData, SerializableHandle};
 
 #[derive(Debug)]
 pub struct Notes {
@@ -34,7 +34,7 @@ impl Notes {
     }
 
     pub fn animate_steps(&mut self) -> Result<&mut Self, NotesError> {
-        let html_dom = parse_document(RcDom::default(), ParseOpts::default())
+        let html_dom = parse_document(ArcDom::default(), ParseOpts::default())
             .from_utf8()
             .read_from(&mut self.output.as_bytes())
             .map_err(NotesError::AnimateStepsError)?;
@@ -80,8 +80,12 @@ impl Notes {
 
         let mut output = Cursor::new(Vec::new());
 
-        serialize(&mut output, body, SerializeOpts::default())
-            .map_err(NotesError::AnimateStepsError)?;
+        serialize(
+            &mut output,
+            &SerializableHandle::from(body.clone()),
+            SerializeOpts::default(),
+        )
+        .map_err(NotesError::AnimateStepsError)?;
 
         self.output = String::from_utf8_lossy(output.get_ref()).to_string();
         self.style = Some(style);
