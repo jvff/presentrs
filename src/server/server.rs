@@ -3,6 +3,7 @@ use std::net::ToSocketAddrs;
 use std::path::PathBuf;
 
 use actix_web::{self, App};
+use derive_more::{Display, Error};
 
 pub struct Server {
     static_dir: PathBuf,
@@ -42,8 +43,8 @@ impl Server {
     }
 }
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Display, Error)]
 pub enum ServerStartError {
-    #[fail(display = "Invalid address to bind to")]
-    InvalidAddress(#[cause] io::Error),
+    #[display(fmt = "Invalid address to bind to")]
+    InvalidAddress(io::Error),
 }

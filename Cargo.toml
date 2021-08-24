@@ -3,3 +3,6 @@ name = "presentrs"
 version = "0.2.0"
 authors = ["Janito Vaqueiro Ferreira Filho <janito.vff@gmail.com>"]
 edition = "2018"
+
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+derive_more = "0.99"

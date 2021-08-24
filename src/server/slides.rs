@@ -4,6 +4,7 @@ use std::fs::{self, DirEntry};
 use std::io;
 use std::path::{Path, PathBuf};
 
+use derive_more::{Display, Error};
 use html5ever::driver::ParseOpts;
 use html5ever::interface::Attribute;
 use html5ever::rcdom::{Handle, NodeData, RcDom};
@@ -158,14 +159,14 @@ impl Slides {
     }
 }
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Display, Error)]
 pub enum SlidesError {
-    #[fail(display = "Failed to parse slides from notes")]
-    FromNotesError(#[cause] io::Error),
-    #[fail(display = "Failed to read slides from directory")]
-    SlidesDirectoryError(#[cause] io::Error),
-    #[fail(display = "Failed to read slide file")]
-    LoadSlide(#[cause] io::Error),
-    #[fail(display = "Failed to write slide")]
-    WriteError(#[cause] io::Error),
+    #[display(fmt = "Failed to parse slides from notes")]
+    FromNotesError(io::Error),
+    #[display(fmt = "Failed to read slides from directory")]
+    SlidesDirectoryError(io::Error),
+    #[display(fmt = "Failed to read slide file")]
+    LoadSlide(io::Error),
+    #[display(fmt = "Failed to write slide")]
+    WriteError(io::Error),
 }

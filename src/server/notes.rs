@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 use std::{fs, io};
 
 use comrak::{markdown_to_html, ComrakOptions};
+use derive_more::{Display, Error};
 use html5ever::driver::ParseOpts;
 use html5ever::interface::{Attribute, QualName};
 use html5ever::rcdom::{Handle, NodeData, RcDom};
@@ -187,12 +188,12 @@ impl Notes {
     }
 }
 
-#[derive(Debug, Fail)]
+#[derive(Debug, Display, Error)]
 pub enum NotesError {
-    #[fail(display = "Failed to load notes")]
-    LoadError(#[cause] io::Error),
-    #[fail(display = "Failed to animate steps for notes")]
-    AnimateStepsError(#[cause] io::Error),
-    #[fail(display = "Failed to generate HTML file for notes")]
-    GenerateHtmlError(#[cause] io::Error),
+    #[display(fmt = "Failed to load notes")]
+    LoadError(io::Error),
+    #[display(fmt = "Failed to animate steps for notes")]
+    AnimateStepsError(io::Error),
+    #[display(fmt = "Failed to generate HTML file for notes")]
+    GenerateHtmlError(io::Error),
 }
