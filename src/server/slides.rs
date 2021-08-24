@@ -1,18 +1,22 @@
-use std::collections::HashMap;
-use std::ffi::OsStr;
-use std::fs::{self, DirEntry};
-use std::io;
-use std::path::{Path, PathBuf};
-
-use derive_more::{Display, Error};
-use html5ever::driver::ParseOpts;
-use html5ever::interface::Attribute;
-use html5ever::serialize::{SerializeOpts, TraversalScope};
-use html5ever::tendril::TendrilSink;
-use html5ever::{parse_document, serialize};
-use markup5ever_arcdom::{ArcDom, Handle, NodeData, SerializableHandle};
-
-use super::notes::Notes;
+use {
+    super::notes::Notes,
+    derive_more::{Display, Error},
+    html5ever::{
+        driver::ParseOpts,
+        interface::Attribute,
+        parse_document, serialize,
+        serialize::{SerializeOpts, TraversalScope},
+        tendril::TendrilSink,
+    },
+    markup5ever_arcdom::{ArcDom, Handle, NodeData, SerializableHandle},
+    std::{
+        collections::HashMap,
+        ffi::OsStr,
+        fs::{self, DirEntry},
+        io,
+        path::{Path, PathBuf},
+    },
+};
 
 pub struct Slides {
     slides: Vec<String>,

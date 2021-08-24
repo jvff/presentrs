@@ -1,16 +1,21 @@
-use std::borrow::BorrowMut;
-use std::io::Cursor;
-use std::path::{Path, PathBuf};
-use std::{fs, io};
-
-use comrak::{markdown_to_html, ComrakOptions};
-use derive_more::{Display, Error};
-use html5ever::driver::ParseOpts;
-use html5ever::interface::{Attribute, QualName};
-use html5ever::serialize::SerializeOpts;
-use html5ever::tendril::TendrilSink;
-use html5ever::{parse_document, serialize};
-use markup5ever_arcdom::{ArcDom, Handle, NodeData, SerializableHandle};
+use {
+    comrak::{markdown_to_html, ComrakOptions},
+    derive_more::{Display, Error},
+    html5ever::{
+        driver::ParseOpts,
+        interface::{Attribute, QualName},
+        parse_document, serialize,
+        serialize::SerializeOpts,
+        tendril::TendrilSink,
+    },
+    markup5ever_arcdom::{ArcDom, Handle, NodeData, SerializableHandle},
+    std::{
+        borrow::BorrowMut,
+        io::Cursor,
+        path::{Path, PathBuf},
+        {fs, io},
+    },
+};
 
 #[derive(Debug)]
 pub struct Notes {
