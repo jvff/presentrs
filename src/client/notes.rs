@@ -79,7 +79,7 @@ impl Renderable<Notes> for Notes {
                         "current-slide-{} current-slide-step-{}",
                         self.current_slide, self.current_step
                     )
-                },>
+                }>
                     {
                         match self.status {
                             Status::Loading(_) => html! {
@@ -104,7 +104,7 @@ impl Renderable<Notes> for Notes {
                 </div>
             }
         } else {
-            html!(<div style={"display: none"},></div>)
+            html!(<div style={"display: none"}></div>)
         }
     }
 }

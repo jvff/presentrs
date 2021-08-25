@@ -166,34 +166,34 @@ impl Renderable<Presentrs> for Presentrs {
     fn view(&self) -> Html<Self> {
         html! {
             <div
-                tabindex = 0,
-                onkeydown = |event| Self::on_key_down(event),
+                tabindex = 0
+                onkeydown = |event| Self::on_key_down(event)
                 style = {"
                     position: absolute;
                     left: 0;
                     right: 0;
                     top: 0;
                     bottom: 0;
-                "},
+                "}
                 >
-                <Slides:
-                    current_slide = self.current_slide,
-                    current_step = self.current_step,
-                    size = self.slide_size,
+                <Slides
+                    current_slide = self.current_slide
+                    current_step = self.current_step
+                    size = self.slide_size
                     on_slide_loaded = |num_steps| {
                         Message::SlideLoaded(num_steps)
-                    },
+                    }
                     />
-                <Notes:
-                    current_slide = self.current_slide,
-                    current_step = self.current_step,
-                    enabled = self.show_notes,
+                <Notes
+                    current_slide = self.current_slide
+                    current_step = self.current_step
+                    enabled = self.show_notes
                     />
-                <Navigation:
-                    on_previous_slide = |_| Message::PreviousSlide,
-                    on_previous_step = |_| Message::PreviousStep,
-                    on_next_step = |_| Message::NextStep,
-                    on_next_slide = |_| Message::NextSlide,
+                <Navigation
+                    on_previous_slide = |_| Message::PreviousSlide
+                    on_previous_step = |_| Message::PreviousStep
+                    on_next_step = |_| Message::NextStep
+                    on_next_slide = |_| Message::NextSlide
                     />
             </div>
         }

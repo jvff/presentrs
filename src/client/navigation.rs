@@ -63,20 +63,20 @@ impl Renderable<Navigation> for Navigation {
                 "position: absolute;
                  bottom: 0;
                  width: 97%;"
-            },>
-                <form onsubmit="return false;", style={
+            }>
+                <form onsubmit="return false;" style={
                     "margin-left: auto; margin-right: auto;"
-                },>
-                    <button type="submit", onclick=|_| Message::PreviousSlide,>
+                }>
+                    <button type="submit" onclick=|_| Message::PreviousSlide>
                         {"Previous slide"}
                     </button>
-                    <button type="submit", onclick=|_| Message::PreviousStep,>
+                    <button type="submit" onclick=|_| Message::PreviousStep>
                         {"Previous step"}
                     </button>
-                    <button type="submit", onclick=|_| Message::NextStep,>
+                    <button type="submit" onclick=|_| Message::NextStep>
                         {"Next step"}
                     </button>
-                    <button type="submit", onclick=|_| Message::NextSlide,>
+                    <button type="submit" onclick=|_| Message::NextSlide>
                         {"Next slide"}
                     </button>
                 </form>
