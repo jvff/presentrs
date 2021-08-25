@@ -32,6 +32,7 @@ pub enum Message {
 }
 
 pub struct Presentrs {
+    component_link: ComponentLink<Self>,
     current_slide: usize,
     current_step: usize,
     current_slide_steps: Option<usize>,
@@ -94,6 +95,7 @@ impl Component for Presentrs {
         ));
 
         let mut this = Presentrs {
+            component_link,
             current_slide: 1,
             current_step: 1,
             current_slide_steps: None,
@@ -166,10 +168,22 @@ impl Component for Presentrs {
     }
 
     fn view(&self) -> Html {
+        let key_down_callback = self.component_link.callback(Self::on_key_down);
+        let slide_loaded_callback =
+            self.component_link.callback(Message::SlideLoaded);
+        let previous_slide_callback =
+            self.component_link.callback(|_| Message::PreviousSlide);
+        let previous_step_callback =
+            self.component_link.callback(|_| Message::PreviousStep);
+        let next_slide_callback =
+            self.component_link.callback(|_| Message::NextSlide);
+        let next_step_callback =
+            self.component_link.callback(|_| Message::NextStep);
+
         html! {
             <div
                 tabindex = 0
-                onkeydown = |event| Self::on_key_down(event)
+                onkeydown = key_down_callback
                 style = {"
                     position: absolute;
                     left: 0;
@@ -182,9 +196,7 @@ impl Component for Presentrs {
                     current_slide = self.current_slide
                     current_step = self.current_step
                     size = self.slide_size
-                    on_slide_loaded = |num_steps| {
-                        Message::SlideLoaded(num_steps)
-                    }
+                    on_slide_loaded = slide_loaded_callback
                     />
                 <Notes
                     current_slide = self.current_slide
@@ -192,10 +204,10 @@ impl Component for Presentrs {
                     enabled = self.show_notes
                     />
                 <Navigation
-                    on_previous_slide = |_| Message::PreviousSlide
-                    on_previous_step = |_| Message::PreviousStep
-                    on_next_step = |_| Message::NextStep
-                    on_next_slide = |_| Message::NextSlide
+                    on_previous_slide = previous_slide_callback
+                    on_previous_step = previous_step_callback
+                    on_next_step = next_step_callback
+                    on_next_slide = next_slide_callback
                     />
             </div>
         }

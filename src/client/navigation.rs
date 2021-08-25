@@ -1,6 +1,7 @@
 use yew::prelude::*;
 
 pub struct Navigation {
+    component_link: ComponentLink<Self>,
     on_previous_slide: Option<Callback<()>>,
     on_previous_step: Option<Callback<()>>,
     on_next_step: Option<Callback<()>>,
@@ -11,8 +12,12 @@ impl Component for Navigation {
     type Message = Message;
     type Properties = Properties;
 
-    fn create(properties: Self::Properties, _: ComponentLink<Self>) -> Self {
+    fn create(
+        properties: Self::Properties,
+        component_link: ComponentLink<Self>,
+    ) -> Self {
         Navigation {
+            component_link,
             on_previous_slide: properties.on_previous_slide,
             on_previous_step: properties.on_previous_step,
             on_next_step: properties.on_next_step,
@@ -56,6 +61,15 @@ impl Component for Navigation {
     }
 
     fn view(&self) -> Html {
+        let previous_slide_callback =
+            self.component_link.callback(|_| Message::PreviousSlide);
+        let previous_step_callback =
+            self.component_link.callback(|_| Message::PreviousStep);
+        let next_slide_callback =
+            self.component_link.callback(|_| Message::NextSlide);
+        let next_step_callback =
+            self.component_link.callback(|_| Message::NextStep);
+
         html! {
             <div style={
                 "position: absolute;
@@ -65,16 +79,16 @@ impl Component for Navigation {
                 <form onsubmit="return false;" style={
                     "margin-left: auto; margin-right: auto;"
                 }>
-                    <button type="submit" onclick=|_| Message::PreviousSlide>
+                    <button type="submit" onclick=previous_slide_callback>
                         {"Previous slide"}
                     </button>
-                    <button type="submit" onclick=|_| Message::PreviousStep>
+                    <button type="submit" onclick=previous_step_callback>
                         {"Previous step"}
                     </button>
-                    <button type="submit" onclick=|_| Message::NextStep>
+                    <button type="submit" onclick=next_step_callback>
                         {"Next step"}
                     </button>
-                    <button type="submit" onclick=|_| Message::NextSlide>
+                    <button type="submit" onclick=next_slide_callback>
                         {"Next slide"}
                     </button>
                 </form>
