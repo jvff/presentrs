@@ -10,7 +10,6 @@ pub struct Slides {
     current_slide: usize,
     current_step: usize,
     status: Status,
-    fetch_service: FetchService,
     link: ComponentLink<Slides>,
     size: SlideSize,
     on_slide_loaded: Option<Callback<usize>>,
@@ -24,9 +23,9 @@ impl Slides {
 
         match request {
             Ok(request) => {
-                let fetch_task = self.fetch_service.fetch(
+                let fetch_task = FetchService::fetch(
                     request,
-                    self.link.send_back(|response: Response<Text>| {
+                    self.link.callback(|response: Response<Text>| {
                         let (meta, body) = response.into_parts();
 
                         if meta.status.is_success() {
@@ -45,7 +44,8 @@ impl Slides {
                             )))
                         }
                     }),
-                );
+                )
+                .expect("Failed to fetch slide");
 
                 self.status = Status::Loading(fetch_task);
             }
@@ -81,7 +81,6 @@ impl Component for Slides {
             current_slide: properties.current_slide,
             current_step: properties.current_step,
             status,
-            fetch_service: FetchService::new(),
             link,
             size: properties.size,
             on_slide_loaded: properties.on_slide_loaded,

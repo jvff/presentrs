@@ -15,14 +15,13 @@ impl Component for Notes {
     type Message = Message;
 
     fn create(properties: Self::Properties, link: ComponentLink<Self>) -> Self {
-        let mut fetch_service = FetchService::new();
         let get_notes_request = Request::get("/notes.html").body(Nothing);
         let status;
 
         if let Ok(request) = get_notes_request {
-            let fetch_task = fetch_service.fetch(
+            let fetch_task = FetchService::fetch(
                 request,
-                link.send_back(|response: Response<Text>| {
+                link.callback(|response: Response<Text>| {
                     let (meta, body) = response.into_parts();
 
                     if meta.status.is_success() {
@@ -35,7 +34,8 @@ impl Component for Notes {
                         Message::LoadComplete(None)
                     }
                 }),
-            );
+            )
+            .expect("Failed to fetch notes");
 
             status = Status::Loading(fetch_task);
         } else {
