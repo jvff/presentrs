@@ -76,19 +76,19 @@ impl Component for Navigation {
                  bottom: 0;
                  width: 97%;"
             }>
-                <form onsubmit="return false;" style={
+                <form style={
                     "margin-left: auto; margin-right: auto;"
                 }>
-                    <button type="submit" onclick=previous_slide_callback>
+                    <button onclick=previous_slide_callback>
                         {"Previous slide"}
                     </button>
-                    <button type="submit" onclick=previous_step_callback>
+                    <button onclick=previous_step_callback>
                         {"Previous step"}
                     </button>
-                    <button type="submit" onclick=next_step_callback>
+                    <button onclick=next_step_callback>
                         {"Next step"}
                     </button>
-                    <button type="submit" onclick=next_slide_callback>
+                    <button onclick=next_slide_callback>
                         {"Next slide"}
                     </button>
                 </form>
