@@ -160,10 +160,12 @@ impl Component for Presentrs {
         }
         true
     }
-}
 
-impl Renderable<Presentrs> for Presentrs {
-    fn view(&self) -> Html<Self> {
+    fn change(&mut self, _properties: Self::Properties) -> ShouldRender {
+        false
+    }
+
+    fn view(&self) -> Html {
         html! {
             <div
                 tabindex = 0

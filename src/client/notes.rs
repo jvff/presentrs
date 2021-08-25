@@ -68,10 +68,8 @@ impl Component for Notes {
         self.enabled = properties.enabled;
         true
     }
-}
 
-impl Renderable<Notes> for Notes {
-    fn view(&self) -> Html<Self> {
+    fn view(&self) -> Html {
         if self.enabled {
             html! {
                 <div class={

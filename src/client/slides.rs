@@ -140,10 +140,8 @@ impl Component for Slides {
 
         true
     }
-}
 
-impl Renderable<Slides> for Slides {
-    fn view(&self) -> Html<Self> {
+    fn view(&self) -> Html {
         html! {
             <div
                 id={"slide"}

@@ -54,10 +54,8 @@ impl Component for Navigation {
 
         true
     }
-}
 
-impl Renderable<Navigation> for Navigation {
-    fn view(&self) -> Html<Self> {
+    fn view(&self) -> Html {
         html! {
             <div style={
                 "position: absolute;
