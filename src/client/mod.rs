@@ -6,9 +6,8 @@ mod slides;
 
 use std;
 
-use stdweb::traits::IEvent;
-use stdweb::web::event::ResizeEvent;
-use stdweb::web::{self, IEventTarget};
+use wasm_bindgen::{closure::Closure, JsCast};
+use web_sys::Event;
 
 use yew::prelude::*;
 
@@ -42,14 +41,22 @@ pub struct Presentrs {
 
 impl Presentrs {
     fn resize(&mut self) {
-        let window = web::window();
-        let width = window.inner_width() as f64;
-        let height = window.inner_height() as f64;
+        let window = web_sys::window().expect("Failed to access window");
+        let width = window
+            .inner_width()
+            .expect("Failed to get inner window width")
+            .as_f64()
+            .expect("Inner window width is not a number");
+        let height = window
+            .inner_height()
+            .expect("Failed to get inner window height")
+            .as_f64()
+            .expect("Inner window height is not a number");
 
         self.slide_size.resize_to_fit_in(width, height);
     }
 
-    fn on_key_down(event: KeyDownEvent) -> Message {
+    fn on_key_down(event: KeyboardEvent) -> Message {
         let message = match event.key().as_str() {
             "ArrowLeft" | "PageUp" => Message::PreviousStep,
             "ArrowRight" | "PageDown" => Message::NextStep,
@@ -70,13 +77,21 @@ impl Component for Presentrs {
     type Message = Message;
     type Properties = ();
 
-    fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
-        let window = web::window();
-        let window_resize_callback = link.send_back(|_| Message::Resize);
+    fn create(
+        _: Self::Properties,
+        component_link: ComponentLink<Self>,
+    ) -> Self {
+        let window = web_sys::window().expect("Failed to access window");
+        let component_resize_callback =
+            component_link.callback(|_| Message::Resize);
+        let window_resize_callback = Closure::wrap(Box::new(move |_: &Event| {
+            component_resize_callback.emit(())
+        })
+            as Box<dyn Fn(&Event)>);
 
-        window.add_event_listener(move |_: ResizeEvent| {
-            window_resize_callback.emit(());
-        });
+        window.set_onresize(Some(
+            window_resize_callback.as_ref().unchecked_ref(),
+        ));
 
         let mut this = Presentrs {
             current_slide: 1,

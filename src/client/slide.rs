@@ -1,8 +1,8 @@
 use std::collections::HashSet;
 use std::{self, cmp};
 
-use stdweb::unstable::TryFrom as StdWebTryFrom;
-use stdweb::web::{CloneKind, Element, IElement, INode, Node};
+use wasm_bindgen::JsCast;
+use web_sys::{Element, Node};
 
 pub struct Slide {
     contents: Node,
@@ -12,10 +12,15 @@ pub struct Slide {
 
 impl Slide {
     pub fn from_html(html: &str) -> Result<Self, String> {
-        match Node::from_html(html) {
-            Ok(contents) => Ok(Self::new(contents)),
-            Err(error) => Err(error.to_string()),
-        }
+        let window = web_sys::window().ok_or("Failed to access window")?;
+        let document = window.document().ok_or("Window has no document")?;
+        let element = document.create_element("div").map_err(|error| {
+            format!("Failed to create <div> element: {:?}", error)
+        })?;
+
+        element.set_outer_html(html);
+
+        Ok(Self::new(element.into()))
     }
 
     pub fn new(contents: Node) -> Self {
@@ -36,8 +41,7 @@ impl Slide {
         max_steps: &mut usize,
         animated_elements: &mut Vec<AnimatedElement>,
     ) {
-        let maybe_element: Result<Element, _> =
-            StdWebTryFrom::try_from(node.clone());
+        let maybe_element: Result<Element, _> = node.clone().dyn_into();
 
         if let Ok(element) = maybe_element {
             if let Some(animated_element) = AnimatedElement::try_from(element) {
@@ -48,8 +52,12 @@ impl Slide {
             }
         }
 
-        for child in node.child_nodes().iter() {
-            Self::load_contents(&child, max_steps, animated_elements);
+        let child_nodes = node.child_nodes();
+
+        for index in 0..child_nodes.length() {
+            if let Some(child) = child_nodes.get(index) {
+                Self::load_contents(&child, max_steps, animated_elements);
+            }
         }
     }
 
@@ -61,7 +69,7 @@ impl Slide {
 
     pub fn as_node(&self) -> Result<Node, String> {
         self.contents
-            .clone_node(CloneKind::Deep)
+            .clone_node_with_deep(true)
             .map_err(|_| "Failed to clone node tree".to_owned())
     }
 

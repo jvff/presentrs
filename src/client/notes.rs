@@ -1,4 +1,3 @@
-use stdweb::web::Node;
 use yew::format::{Nothing, Text};
 use yew::prelude::*;
 use yew::services::fetch::{FetchService, FetchTask, Request, Response};
@@ -87,12 +86,15 @@ impl Renderable<Notes> for Notes {
                                 <p>{"Loading notes"}</p>
                             },
                             Status::Ready(ref notes) => {
-                                match Node::from_html(notes.trim()) {
-                                    Ok(notes) => VNode::VRef(notes),
-                                    Err(_) => html! {
-                                        <p>{"Notes are not valid HTML"}</p>
-                                    },
-                                }
+                                let window = web_sys::window().expect("Failed to access window");
+                                let document = window.document().expect("Window has no document");
+                                let element = document
+                                    .create_element("div")
+                                    .expect("Failed to create <div> element");
+
+                                element.set_outer_html(notes.trim());
+
+                                VNode::VRef(element.into())
                             }
                             Status::Error => html! {
                                 <p>{"Failed to load notes"}</p>
