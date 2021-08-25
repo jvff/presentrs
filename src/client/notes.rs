@@ -113,10 +113,13 @@ pub enum Status {
     Error,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Properties)]
 pub struct Properties {
+    #[prop_or(1)]
     pub current_slide: usize,
+    #[prop_or(1)]
     pub current_step: usize,
+    #[prop_or(false)]
     pub enabled: bool,
 }
 

@@ -90,7 +90,7 @@ pub enum Message {
     NextStep,
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Properties)]
 pub struct Properties {
     pub on_previous_slide: Option<Callback<()>>,
     pub on_previous_step: Option<Callback<()>>,

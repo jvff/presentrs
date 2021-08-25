@@ -217,11 +217,15 @@ pub enum Status {
     },
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Properties)]
 pub struct Properties {
+    #[prop_or(1)]
     pub current_slide: usize,
+    #[prop_or(1)]
     pub current_step: usize,
+    #[prop_or_default]
     pub size: SlideSize,
+    #[prop_or_default]
     pub on_slide_loaded: Option<Callback<usize>>,
 }
 
