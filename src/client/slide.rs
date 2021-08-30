@@ -14,11 +14,16 @@ impl Slide {
     pub fn from_html(html: &str) -> Result<Self, String> {
         let window = web_sys::window().ok_or("Failed to access window")?;
         let document = window.document().ok_or("Window has no document")?;
-        let element = document.create_element("div").map_err(|error| {
-            format!("Failed to create <div> element: {:?}", error)
-        })?;
+        let parent_element =
+            document.create_element("div").map_err(|error| {
+                format!("Failed to create <div> element: {:?}", error)
+            })?;
 
-        element.set_outer_html(html);
+        parent_element.set_inner_html(html);
+
+        let element = parent_element
+            .first_element_child()
+            .ok_or_else(|| "Invalid HTML to create a slide".to_owned())?;
 
         Ok(Self::new(element.into()))
     }

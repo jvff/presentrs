@@ -86,11 +86,15 @@ impl Component for Notes {
                             Status::Ready(ref notes) => {
                                 let window = web_sys::window().expect("Failed to access window");
                                 let document = window.document().expect("Window has no document");
-                                let element = document
+                                let parent_element = document
                                     .create_element("div")
                                     .expect("Failed to create <div> element");
 
-                                element.set_outer_html(notes.trim());
+                                parent_element.set_inner_html(notes.trim());
+
+                                let element = parent_element
+                                    .first_element_child()
+                                    .expect("Invalid HTML for notes");
 
                                 VNode::VRef(element.into())
                             }
