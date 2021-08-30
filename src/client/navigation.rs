@@ -1,75 +1,51 @@
 use yew::prelude::*;
 
 pub struct Navigation {
-    component_link: ComponentLink<Self>,
-    on_previous_slide: Option<Callback<()>>,
-    on_previous_step: Option<Callback<()>>,
-    on_next_step: Option<Callback<()>>,
-    on_next_slide: Option<Callback<()>>,
+    on_previous_slide: Option<Callback<MouseEvent>>,
+    on_previous_step: Option<Callback<MouseEvent>>,
+    on_next_step: Option<Callback<MouseEvent>>,
+    on_next_slide: Option<Callback<MouseEvent>>,
+}
+
+impl Navigation {
+    fn build_callback(
+        callback: Option<Callback<()>>,
+    ) -> Option<Callback<MouseEvent>> {
+        callback.map(|callback| callback.reform(|_| ()))
+    }
 }
 
 impl Component for Navigation {
-    type Message = Message;
+    type Message = ();
     type Properties = Properties;
 
-    fn create(
-        properties: Self::Properties,
-        component_link: ComponentLink<Self>,
-    ) -> Self {
+    fn create(properties: Self::Properties, _: ComponentLink<Self>) -> Self {
         Navigation {
-            component_link,
-            on_previous_slide: properties.on_previous_slide,
-            on_previous_step: properties.on_previous_step,
-            on_next_step: properties.on_next_step,
-            on_next_slide: properties.on_next_slide,
+            on_previous_slide: Self::build_callback(
+                properties.on_previous_slide,
+            ),
+            on_previous_step: Self::build_callback(properties.on_previous_step),
+            on_next_step: Self::build_callback(properties.on_next_step),
+            on_next_slide: Self::build_callback(properties.on_next_slide),
         }
     }
 
-    fn update(&mut self, message: Self::Message) -> ShouldRender {
-        match message {
-            Message::PreviousSlide => {
-                if let Some(ref callback) = self.on_previous_slide {
-                    callback.emit(());
-                }
-            }
-            Message::PreviousStep => {
-                if let Some(ref callback) = self.on_previous_step {
-                    callback.emit(());
-                }
-            }
-            Message::NextStep => {
-                if let Some(ref callback) = self.on_next_step {
-                    callback.emit(());
-                }
-            }
-            Message::NextSlide => {
-                if let Some(ref callback) = self.on_next_slide {
-                    callback.emit(());
-                }
-            }
-        }
-        true
+    fn update(&mut self, _: Self::Message) -> ShouldRender {
+        false
     }
 
     fn change(&mut self, properties: Self::Properties) -> ShouldRender {
-        self.on_previous_slide = properties.on_previous_slide;
-        self.on_previous_step = properties.on_previous_step;
-        self.on_next_step = properties.on_next_step;
-        self.on_next_slide = properties.on_next_slide;
+        self.on_previous_slide =
+            Self::build_callback(properties.on_previous_slide);
+        self.on_previous_step =
+            Self::build_callback(properties.on_previous_step);
+        self.on_next_step = Self::build_callback(properties.on_next_step);
+        self.on_next_slide = Self::build_callback(properties.on_next_slide);
 
         true
     }
 
     fn view(&self) -> Html {
-        let previous_slide_callback =
-            self.component_link.callback(|_| Message::PreviousSlide);
-        let previous_step_callback =
-            self.component_link.callback(|_| Message::PreviousStep);
-        let next_slide_callback =
-            self.component_link.callback(|_| Message::NextSlide);
-        let next_step_callback =
-            self.component_link.callback(|_| Message::NextStep);
-
         html! {
             <div style={
                 "position: absolute;
@@ -79,29 +55,22 @@ impl Component for Navigation {
                 <form style={
                     "margin-left: auto; margin-right: auto;"
                 }>
-                    <button onclick=previous_slide_callback>
+                    <button onclick=&self.on_previous_slide>
                         {"Previous slide"}
                     </button>
-                    <button onclick=previous_step_callback>
+                    <button onclick=&self.on_previous_step>
                         {"Previous step"}
                     </button>
-                    <button onclick=next_step_callback>
+                    <button onclick=&self.on_next_step>
                         {"Next step"}
                     </button>
-                    <button onclick=next_slide_callback>
+                    <button onclick=&self.on_next_slide>
                         {"Next slide"}
                     </button>
                 </form>
             </div>
         }
     }
-}
-
-pub enum Message {
-    PreviousSlide,
-    PreviousStep,
-    NextSlide,
-    NextStep,
 }
 
 #[derive(Clone, PartialEq, Properties)]
