@@ -1,4 +1,5 @@
 mod navigation;
+mod navigation_button;
 mod notes;
 mod slide;
 mod slide_size;
