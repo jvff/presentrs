@@ -7,6 +7,7 @@ use super::slide::Slide;
 use super::slide_size::SlideSize;
 
 pub struct Slides {
+    locale_path: String,
     current_slide: usize,
     current_step: usize,
     status: Status,
@@ -17,9 +18,11 @@ pub struct Slides {
 
 impl Slides {
     fn fetch_slide(&mut self) {
-        let request =
-            Request::get(format!("/slides/{}.html", self.current_slide))
-                .body(Nothing);
+        let request = Request::get(format!(
+            "/slides/{}{}.html",
+            self.locale_path, self.current_slide
+        ))
+        .body(Nothing);
 
         match request {
             Ok(request) => {
@@ -77,7 +80,16 @@ impl Component for Slides {
             contents: None,
         };
 
+        let locale_path = properties
+            .locale
+            .map(|mut locale| {
+                locale.push('/');
+                locale
+            })
+            .unwrap_or_else(String::new);
+
         let mut this = Slides {
+            locale_path,
             current_slide: properties.current_slide,
             current_step: properties.current_step,
             status,
@@ -218,6 +230,8 @@ pub enum Status {
 
 #[derive(Clone, PartialEq, Properties)]
 pub struct Properties {
+    #[prop_or_default]
+    pub locale: Option<String>,
     #[prop_or(1)]
     pub current_slide: usize,
     #[prop_or(1)]
@@ -231,6 +245,7 @@ pub struct Properties {
 impl Default for Properties {
     fn default() -> Self {
         Properties {
+            locale: None,
             current_slide: 1,
             current_step: 1,
             size: SlideSize::default(),

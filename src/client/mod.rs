@@ -34,6 +34,8 @@ pub enum Message {
 
 pub struct Presentrs {
     component_link: ComponentLink<Self>,
+    locale: Option<String>,
+    locales: Vec<String>,
     current_slide: usize,
     current_step: usize,
     current_slide_steps: Option<usize>,
@@ -77,10 +79,10 @@ impl Presentrs {
 
 impl Component for Presentrs {
     type Message = Message;
-    type Properties = ();
+    type Properties = Properties;
 
     fn create(
-        _: Self::Properties,
+        properties: Self::Properties,
         component_link: ComponentLink<Self>,
     ) -> Self {
         let window = web_sys::window().expect("Failed to access window");
@@ -97,6 +99,8 @@ impl Component for Presentrs {
 
         let mut this = Presentrs {
             component_link,
+            locale: properties.locales.first().cloned(),
+            locales: properties.locales,
             current_slide: 1,
             current_step: 1,
             current_slide_steps: None,
@@ -164,8 +168,18 @@ impl Component for Presentrs {
         true
     }
 
-    fn change(&mut self, _properties: Self::Properties) -> ShouldRender {
-        false
+    fn change(&mut self, properties: Self::Properties) -> ShouldRender {
+        self.locales = properties.locales;
+
+        if self.locale.is_none() && !self.locales.is_empty() {
+            self.locale = self.locales.first().cloned();
+        } else if let Some(locale) = self.locale.as_ref() {
+            if !self.locales.contains(locale) {
+                self.locale = self.locales.first().cloned();
+            }
+        }
+
+        true
     }
 
     fn view(&self) -> Html {
@@ -194,6 +208,7 @@ impl Component for Presentrs {
                 "}
                 >
                 <Slides
+                    locale = self.locale.clone()
                     current_slide = self.current_slide
                     current_step = self.current_step
                     size = self.slide_size
@@ -212,5 +227,30 @@ impl Component for Presentrs {
                     />
             </div>
         }
+    }
+}
+
+#[derive(Clone, Debug, Default, Properties)]
+pub struct Properties {
+    locales: Vec<String>,
+}
+
+impl Properties {
+    pub fn with_locales<I>(mut self, locales: I) -> Self
+    where
+        I: IntoIterator,
+        I::Item: Into<String>,
+    {
+        self.locales = locales.into_iter().map(|item| item.into()).collect();
+        self
+    }
+
+    pub fn set_locales<I>(&mut self, locales: I) -> &mut Self
+    where
+        I: IntoIterator,
+        I::Item: Into<String>,
+    {
+        self.locales = locales.into_iter().map(|item| item.into()).collect();
+        self
     }
 }
