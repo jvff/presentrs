@@ -5,17 +5,16 @@ mod slide;
 mod slide_size;
 mod slides;
 
-use std;
-
-use wasm_bindgen::{closure::Closure, JsCast};
-use web_sys::Event;
-
-use yew::prelude::*;
-
-use self::navigation::Navigation;
-use self::notes::Notes;
-use self::slide_size::SlideSize;
-use self::slides::Slides;
+use {
+    self::{
+        navigation::Navigation, notes::Notes, slide_size::SlideSize,
+        slides::Slides,
+    },
+    std,
+    wasm_bindgen::{closure::Closure, JsCast},
+    web_sys::Event,
+    yew::prelude::*,
+};
 
 const SLIDE_WIDTH: f64 = 800.0;
 const SLIDE_HEIGHT: f64 = 600.0;
