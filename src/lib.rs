@@ -8,4 +8,4 @@ mod server;
 pub use crate::client::{Presentrs, Properties};
 
 #[cfg(not(target_family = "wasm"))]
-pub use crate::server::{Notes, NotesError, Slides, SlidesError};
+pub use crate::server::{Notes, NotesError, Presentrs, Slides, SlidesError};
