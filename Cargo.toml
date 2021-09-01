@@ -11,9 +11,11 @@ wasm-bindgen = "0.2"
 web-sys = { version = "0.3", features = ["NodeList"] }
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
-axum = "0.2"
+axum = { version = "0.2", features = ["ws"] }
 comrak = "0.11"
 derive_more = "0.99"
+futures-util = "0.3"
 html5ever = "0.25"
 markup5ever_arcdom = "0.1"
 tower-http = { version = "0.1", features = ["fs"] }
+tokio = { version = "1", features = ["sync"] }

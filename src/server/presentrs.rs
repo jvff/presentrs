@@ -1,5 +1,9 @@
 use {
-    axum::{http::StatusCode, routing::BoxRoute, service::get, Router},
+    super::slide_presenter::SlidePresenter,
+    axum::{
+        handler, http::StatusCode, routing::BoxRoute, service,
+        AddExtensionLayer, Router,
+    },
     std::{convert::Infallible, io, path::Path},
     tower_http::services::ServeDir,
 };
@@ -11,7 +15,7 @@ impl Presentrs {
         Router::new()
             .nest(
                 "/",
-                get(ServeDir::new(path)).handle_error(
+                service::get(ServeDir::new(path)).handle_error(
                     |_error: io::Error| -> Result<_, Infallible> {
                         Ok((
                             StatusCode::INTERNAL_SERVER_ERROR,
@@ -20,6 +24,8 @@ impl Presentrs {
                     },
                 ),
             )
+            .route("/sync", handler::get(SlidePresenter::handler))
+            .layer(AddExtensionLayer::new(SlidePresenter::new()))
             .boxed()
     }
 }

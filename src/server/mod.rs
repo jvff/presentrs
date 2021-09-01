@@ -1,5 +1,6 @@
 mod notes;
 mod presentrs;
+mod slide_presenter;
 mod slides;
 
 pub use self::{
