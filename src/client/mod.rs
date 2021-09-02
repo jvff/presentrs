@@ -29,6 +29,8 @@ pub enum Message {
     NextSlide,
     NextStep,
     Resize,
+    TogglePresent,
+    ChangePosition { slide: u16, step: u16 },
     Ignore,
 }
 
@@ -41,6 +43,7 @@ pub struct Presentrs {
     current_slide_steps: Option<usize>,
     slide_size: SlideSize,
     show_notes: bool,
+    presenting: bool,
 }
 
 impl Presentrs {
@@ -68,6 +71,7 @@ impl Presentrs {
             "ArrowDown" => Message::NextSlide,
             "Home" => Message::FirstSlide,
             "n" => Message::ToggleNotes,
+            "p" => Message::TogglePresent,
             _ => return Message::Ignore,
         };
 
@@ -106,6 +110,7 @@ impl Component for Presentrs {
             current_slide_steps: None,
             slide_size: SlideSize::new(SLIDE_WIDTH, SLIDE_HEIGHT),
             show_notes: false,
+            presenting: false,
         };
 
         this.resize();
@@ -162,6 +167,12 @@ impl Component for Presentrs {
                 self.current_step = 1;
                 self.current_slide_steps = None;
             }
+            Message::ChangePosition { slide, step } => {
+                self.current_slide = slide.into();
+                self.current_step = step.into();
+                self.current_slide_steps = None;
+            }
+            Message::TogglePresent => self.presenting = !self.presenting,
             Message::Resize => self.resize(),
             Message::Ignore => return false,
         }
@@ -194,6 +205,9 @@ impl Component for Presentrs {
             self.component_link.callback(|_| Message::NextSlide);
         let next_step_callback =
             self.component_link.callback(|_| Message::NextStep);
+        let update_position_callback = self
+            .component_link
+            .callback(|(slide, step)| Message::ChangePosition { slide, step });
 
         html! {
             <div
@@ -224,6 +238,10 @@ impl Component for Presentrs {
                     on_previous_step = previous_step_callback
                     on_next_step = next_step_callback
                     on_next_slide = next_slide_callback
+                    on_update_position = update_position_callback
+                    presenting = self.presenting
+                    current_slide = self.current_slide
+                    current_step = self.current_step
                     />
             </div>
         }
