@@ -1,5 +1,5 @@
 use {
-    std::convert::TryInto,
+    std::{convert::TryInto, mem},
     yew::{
         format::Binary,
         prelude::*,
@@ -12,7 +12,7 @@ use {
 pub struct SlideSync {
     component_link: ComponentLink<Self>,
     url: String,
-    connection: Option<WebSocketTask>,
+    state: State,
     presenting: bool,
     current_slide: usize,
     current_step: usize,
@@ -35,31 +35,50 @@ pub enum Message {
     Ignore,
 }
 
+enum State {
+    Offline,
+    Presenting(WebSocketTask),
+}
+
 impl SlideSync {
     fn present(&mut self) -> ShouldRender {
-        if self.presenting && self.connection.is_none() {
-            self.connect();
+        let previous_state = mem::replace(&mut self.state, State::Offline);
+
+        if self.presenting {
+            self.state = match previous_state {
+                State::Offline => State::Presenting(self.connect()),
+                State::Presenting(connection) => State::Presenting(connection),
+            }
         }
 
         true
     }
 
-    fn connect(&mut self) {
-        self.connection = WebSocketService::connect_binary(
-            &self.url,
-            self.component_link.callback(Self::ws_message_handler),
-            self.component_link.callback(Self::ws_event_handler),
-        )
-        .ok();
+    fn connect(&mut self) -> WebSocketTask {
+        for _attempt in 1..10 {
+            let connection = WebSocketService::connect_binary(
+                &self.url,
+                self.component_link.callback(Self::ws_message_handler),
+                self.component_link.callback(Self::ws_event_handler),
+            );
+
+            if let Ok(connection) = connection {
+                return connection;
+            }
+        }
+
+        panic!("Failed to connect for synchronization");
     }
 
     fn reconnect(&mut self) -> ShouldRender {
-        if self.presenting {
-            self.connect();
-            true
-        } else {
-            false
+        match mem::replace(&mut self.state, State::Offline) {
+            State::Offline => {}
+            State::Presenting(_) => {
+                self.state = State::Presenting(self.connect())
+            }
         }
+
+        false
     }
 
     fn ws_message_handler(message_bytes: Binary) -> Message {
@@ -90,18 +109,10 @@ impl SlideSync {
     }
 
     fn send_position(&mut self) -> ShouldRender {
-        if self.presenting {
-            if let Some(connection) = self.connection.as_mut() {
-                let mut message = Vec::with_capacity(4);
-                let slide = self.current_slide.try_into().unwrap_or(u16::MAX);
-                let step = self.current_step.try_into().unwrap_or(u16::MAX);
+        let slide = self.current_slide.try_into().unwrap_or(u16::MAX);
+        let step = self.current_step.try_into().unwrap_or(u16::MAX);
 
-                message.extend(slide.to_be_bytes());
-                message.extend(step.to_be_bytes());
-
-                connection.send_binary(Ok(message));
-            }
-        }
+        self.state.send_position(slide, step);
 
         false
     }
@@ -121,6 +132,22 @@ impl SlideSync {
     }
 }
 
+impl State {
+    pub fn send_position(&mut self, slide: u16, step: u16) {
+        match self {
+            State::Offline => {}
+            State::Presenting(connection) => {
+                let mut message = Vec::with_capacity(4);
+
+                message.extend(slide.to_be_bytes());
+                message.extend(step.to_be_bytes());
+
+                connection.send_binary(Ok(message));
+            }
+        }
+    }
+}
+
 impl Component for SlideSync {
     type Message = Message;
     type Properties = Properties;
@@ -132,7 +159,7 @@ impl Component for SlideSync {
         SlideSync {
             component_link,
             url: properties.url,
-            connection: None,
+            state: State::Offline,
             presenting: properties.presenting,
             current_slide: properties.current_slide,
             current_step: properties.current_step,
