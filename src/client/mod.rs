@@ -130,9 +130,12 @@ impl Component for Presentrs {
                 }
             }
             Message::FirstSlide => {
-                self.current_slide = 1;
+                if self.current_slide != 1 {
+                    self.current_slide = 1;
+                    self.current_slide_steps = None;
+                }
+
                 self.current_step = 1;
-                self.current_slide_steps = None;
             }
             Message::PreviousSlide => {
                 if self.current_slide > 1 {
@@ -168,9 +171,14 @@ impl Component for Presentrs {
                 self.current_slide_steps = None;
             }
             Message::ChangePosition { slide, step } => {
-                self.current_slide = slide.into();
+                let slide: usize = slide.into();
+
+                if self.current_slide != slide {
+                    self.current_slide = slide.into();
+                    self.current_slide_steps = None;
+                }
+
                 self.current_step = step.into();
-                self.current_slide_steps = None;
             }
             Message::TogglePresent => self.presenting = !self.presenting,
             Message::Resize => self.resize(),
