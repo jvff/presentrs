@@ -3,6 +3,7 @@ mod navigation_button;
 mod notes;
 mod slide;
 mod slide_size;
+mod slide_sync;
 mod slides;
 
 use {
