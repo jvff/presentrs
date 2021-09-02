@@ -1,5 +1,6 @@
 use {
     super::{slide::Slide, slide_size::SlideSize},
+    lru::LruCache,
     yew::{
         format::{Nothing, Text},
         prelude::*,
@@ -10,19 +11,34 @@ use {
 
 pub struct Slides {
     locale_path: String,
+    slide_cache: LruCache<usize, Status>,
     current_slide: usize,
     current_step: usize,
-    status: Status,
     link: ComponentLink<Slides>,
     size: SlideSize,
     on_slide_loaded: Option<Callback<usize>>,
 }
 
 impl Slides {
-    fn fetch_slide(&mut self) {
+    fn fetch_slides(&mut self) {
+        for offset in -1..3 {
+            let index = self.current_slide as isize + offset;
+
+            if index >= 0 {
+                self.fetch_slide(index as usize);
+            }
+        }
+    }
+
+    fn fetch_slide(&mut self, slide_index: usize) {
+        match self.slide_cache.peek(&slide_index) {
+            None | Some(Status::Error { .. }) => {}
+            Some(Status::Loading(_)) | Some(Status::Ready(_)) => return,
+        }
+
         let request = Request::get(format!(
             "/slides/{}{}.html",
-            self.locale_path, self.current_slide
+            self.locale_path, slide_index
         ))
         .body(Nothing);
 
@@ -30,42 +46,50 @@ impl Slides {
             Ok(request) => {
                 let fetch_task = FetchService::fetch(
                     request,
-                    self.link.callback(|response: Response<Text>| {
+                    self.link.callback(move |response: Response<Text>| {
                         let (meta, body) = response.into_parts();
 
                         if meta.status.is_success() {
                             match body {
-                                Ok(contents) => {
-                                    Message::LoadComplete(Ok(contents))
-                                }
-                                Err(error) => Message::LoadComplete(Err(
-                                    error.to_string()
-                                )),
+                                Ok(contents) => Message::LoadComplete(
+                                    slide_index,
+                                    Ok(contents),
+                                ),
+                                Err(error) => Message::LoadComplete(
+                                    slide_index,
+                                    Err(error.to_string()),
+                                ),
                             }
                         } else {
-                            Message::LoadComplete(Err(format!(
-                                "Get error: {}",
-                                meta.status
-                            )))
+                            Message::LoadComplete(
+                                slide_index,
+                                Err(format!("Get error: {}", meta.status)),
+                            )
                         }
                     }),
                 )
                 .expect("Failed to fetch slide");
 
-                self.status = Status::Loading(fetch_task);
+                self.slide_cache
+                    .put(slide_index, Status::Loading(fetch_task));
             }
             Err(error) => {
-                self.status = Status::Error {
-                    description: "Failed to download slide",
-                    cause: Some(error.to_string()),
-                    contents: None,
-                };
+                self.slide_cache.put(
+                    slide_index,
+                    Status::Error {
+                        description: "Failed to download slide",
+                        cause: Some(error.to_string()),
+                        contents: None,
+                    },
+                );
             }
         }
     }
 
     fn animate_slide(&mut self) {
-        if let Status::Ready(ref mut slide) = self.status {
+        let current_slide = self.slide_cache.get_mut(&self.current_slide);
+
+        if let Some(Status::Ready(ref mut slide)) = current_slide {
             slide.animate_for_step(self.current_step);
         }
     }
@@ -76,12 +100,6 @@ impl Component for Slides {
     type Message = Message;
 
     fn create(properties: Self::Properties, link: ComponentLink<Self>) -> Self {
-        let status = Status::Error {
-            description: "Starting",
-            cause: None,
-            contents: None,
-        };
-
         let locale_path = properties
             .locale
             .map(|mut locale| {
@@ -92,49 +110,59 @@ impl Component for Slides {
 
         let mut this = Slides {
             locale_path,
+            slide_cache: LruCache::new(10),
             current_slide: properties.current_slide,
             current_step: properties.current_step,
-            status,
             link,
             size: properties.size,
             on_slide_loaded: properties.on_slide_loaded,
         };
 
-        this.fetch_slide();
+        this.fetch_slides();
         this
     }
 
     fn update(&mut self, message: Self::Message) -> ShouldRender {
         match message {
-            Message::LoadComplete(Ok(contents)) => {
+            Message::LoadComplete(index, Ok(contents)) => {
                 match Slide::from_html(contents.trim()) {
                     Ok(slide) => {
                         let num_steps = slide.num_steps();
 
-                        self.status = Status::Ready(slide);
-                        self.animate_slide();
+                        self.slide_cache.put(index, Status::Ready(slide));
 
-                        if let Some(ref callback) = self.on_slide_loaded {
-                            callback.emit(num_steps);
+                        if index == self.current_slide {
+                            self.animate_slide();
+
+                            if let Some(ref callback) = self.on_slide_loaded {
+                                callback.emit(num_steps);
+                            }
                         }
                     }
                     Err(error) => {
-                        self.status = Status::Error {
-                            description: "Slide is not valid HTML",
-                            cause: Some(error),
-                            contents: Some(contents),
-                        };
+                        self.slide_cache.put(
+                            index,
+                            Status::Error {
+                                description: "Slide is not valid HTML",
+                                cause: Some(error),
+                                contents: Some(contents),
+                            },
+                        );
                     }
                 }
             }
-            Message::LoadComplete(Err(error)) => {
-                self.status = Status::Error {
-                    description: "Failed to download slide",
-                    cause: Some(error),
-                    contents: None,
-                };
+            Message::LoadComplete(index, Err(error)) => {
+                self.slide_cache.put(
+                    index,
+                    Status::Error {
+                        description: "Failed to download slide",
+                        cause: Some(error),
+                        contents: None,
+                    },
+                );
             }
-        }
+        };
+
         true
     }
 
@@ -143,7 +171,7 @@ impl Component for Slides {
 
         if self.current_slide != properties.current_slide {
             self.current_slide = properties.current_slide;
-            self.fetch_slide();
+            self.fetch_slides();
         }
 
         if self.current_step != properties.current_step {
@@ -155,6 +183,8 @@ impl Component for Slides {
     }
 
     fn view(&self) -> Html {
+        let slide_status = self.slide_cache.peek(&self.current_slide);
+
         html! {
             <div
                 id={"slide"}
@@ -162,11 +192,11 @@ impl Component for Slides {
                 class={ format!("current-slide-step-{}", self.current_step) }
             >
                 {
-                    match self.status {
-                        Status::Loading(_) => html! {
+                    match slide_status {
+                        Some(Status::Loading(_)) => html! {
                             <p>{"Loading slide"}</p>
                         },
-                        Status::Ready(ref slide) => {
+                        Some(Status::Ready(ref slide)) => {
                             match slide.as_node() {
                                 Ok(node) => VNode::VRef(node),
                                 Err(error) => html! {
@@ -179,11 +209,11 @@ impl Component for Slides {
                                 },
                             }
                         }
-                        Status::Error {
+                        Some(Status::Error {
                             description,
                             ref cause,
                             ref contents,
-                        } => {
+                        }) => {
                             html! {
                                 <div>
                                     <p><strong>{description}</strong></p>
@@ -210,6 +240,14 @@ impl Component for Slides {
                                             html!{}
                                         }
                                     }
+                                </div>
+                            }
+                        }
+                        None => {
+                            html! {
+                                <div>
+                                    <p><strong>{"Fatal error"}</strong></p>
+                                    <p>{"Slide was not loaded"}</p>
                                 </div>
                             }
                         }
@@ -257,5 +295,5 @@ impl Default for Properties {
 }
 
 pub enum Message {
-    LoadComplete(Result<String, String>),
+    LoadComplete(usize, Result<String, String>),
 }
