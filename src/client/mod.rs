@@ -11,7 +11,7 @@ use {
         navigation::Navigation, notes::Notes, slide_size::SlideSize,
         slides::Slides,
     },
-    std,
+    lru::LruCache,
     wasm_bindgen::{closure::Closure, JsCast},
     web_sys::Event,
     yew::prelude::*,
@@ -22,7 +22,7 @@ const SLIDE_HEIGHT: f64 = 600.0;
 
 pub enum Message {
     ToggleNotes,
-    SlideLoaded(usize),
+    SlideLoaded(usize, usize),
     FirstSlide,
     PreviousSlide,
     PreviousStep,
@@ -40,7 +40,7 @@ pub struct Presentrs {
     locales: Vec<String>,
     current_slide: usize,
     current_step: usize,
-    current_slide_steps: Option<usize>,
+    slide_steps_cache: LruCache<usize, usize>,
     slide_size: SlideSize,
     show_notes: bool,
     presenting: bool,
@@ -107,7 +107,7 @@ impl Component for Presentrs {
             locales: properties.locales,
             current_slide: 1,
             current_step: 1,
-            current_slide_steps: None,
+            slide_steps_cache: LruCache::new(50),
             slide_size: SlideSize::new(SLIDE_WIDTH, SLIDE_HEIGHT),
             show_notes: false,
             presenting: false,
@@ -122,17 +122,18 @@ impl Component for Presentrs {
             Message::ToggleNotes => {
                 self.show_notes = !self.show_notes;
             }
-            Message::SlideLoaded(num_steps) => {
-                self.current_slide_steps = Some(num_steps.max(1));
+            Message::SlideLoaded(slide_index, num_steps) => {
+                self.slide_steps_cache.put(slide_index, num_steps.max(1));
 
-                if self.current_step == std::usize::MAX {
+                if self.current_slide == slide_index
+                    && self.current_step == usize::MAX
+                {
                     self.current_step = num_steps;
                 }
             }
             Message::FirstSlide => {
                 if self.current_slide != 1 {
                     self.current_slide = 1;
-                    self.current_slide_steps = None;
                 }
 
                 self.current_step = 1;
@@ -141,41 +142,44 @@ impl Component for Presentrs {
                 if self.current_slide > 1 {
                     self.current_slide -= 1;
                 }
+
                 self.current_step = 1;
-                self.current_slide_steps = None;
             }
             Message::PreviousStep => {
-                if self.current_step > 1 && self.current_slide_steps.is_some() {
+                if self.current_step > 1 {
                     self.current_step -= 1;
                 } else if self.current_slide > 1 {
                     self.current_slide -= 1;
-                    self.current_step = std::usize::MAX;
-                    self.current_slide_steps = None;
+                    self.current_step = self
+                        .slide_steps_cache
+                        .peek(&self.current_slide)
+                        .copied()
+                        .unwrap_or(usize::MAX);
                 }
             }
             Message::NextStep => {
-                let last_step =
-                    self.current_slide_steps.unwrap_or(std::usize::MAX);
+                let last_step = self
+                    .slide_steps_cache
+                    .peek(&self.current_slide)
+                    .copied()
+                    .unwrap_or(usize::MAX);
 
                 if self.current_step < last_step {
                     self.current_step += 1;
                 } else {
                     self.current_slide += 1;
                     self.current_step = 1;
-                    self.current_slide_steps = None;
                 }
             }
             Message::NextSlide => {
                 self.current_slide += 1;
                 self.current_step = 1;
-                self.current_slide_steps = None;
             }
             Message::ChangePosition { slide, step } => {
                 let slide: usize = slide.into();
 
                 if self.current_slide != slide {
                     self.current_slide = slide.into();
-                    self.current_slide_steps = None;
                 }
 
                 self.current_step = step.into();
@@ -204,7 +208,10 @@ impl Component for Presentrs {
     fn view(&self) -> Html {
         let key_down_callback = self.component_link.callback(Self::on_key_down);
         let slide_loaded_callback =
-            self.component_link.callback(Message::SlideLoaded);
+            self.component_link
+                .callback(|(slide_index, slide_step_count)| {
+                    Message::SlideLoaded(slide_index, slide_step_count)
+                });
         let previous_slide_callback =
             self.component_link.callback(|_| Message::PreviousSlide);
         let previous_step_callback =

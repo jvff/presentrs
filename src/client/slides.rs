@@ -16,7 +16,7 @@ pub struct Slides {
     current_step: usize,
     link: ComponentLink<Slides>,
     size: SlideSize,
-    on_slide_loaded: Option<Callback<usize>>,
+    on_slide_loaded: Option<Callback<(usize, usize)>>,
 }
 
 impl Slides {
@@ -135,7 +135,7 @@ impl Component for Slides {
                             self.animate_slide();
 
                             if let Some(ref callback) = self.on_slide_loaded {
-                                callback.emit(num_steps);
+                                callback.emit((index, num_steps));
                             }
                         }
                     }
@@ -279,7 +279,7 @@ pub struct Properties {
     #[prop_or_default]
     pub size: SlideSize,
     #[prop_or_default]
-    pub on_slide_loaded: Option<Callback<usize>>,
+    pub on_slide_loaded: Option<Callback<(usize, usize)>>,
 }
 
 impl Default for Properties {
