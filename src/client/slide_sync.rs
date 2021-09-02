@@ -31,12 +31,14 @@ pub struct Properties {
 pub enum Message {
     Connected,
     Disconnected,
+    ToggleSync,
     Update { slide: u16, step: u16 },
     Ignore,
 }
 
 enum State {
     Offline,
+    Syncing(WebSocketTask),
     Presenting(WebSocketTask),
 }
 
@@ -47,9 +49,32 @@ impl SlideSync {
         if self.presenting {
             self.state = match previous_state {
                 State::Offline => State::Presenting(self.connect()),
-                State::Presenting(connection) => State::Presenting(connection),
-            }
+                State::Syncing(connection) | State::Presenting(connection) => {
+                    State::Presenting(connection)
+                }
+            };
+        } else {
+            self.state = match previous_state {
+                State::Offline => State::Offline,
+                State::Syncing(connection) | State::Presenting(connection) => {
+                    State::Syncing(connection)
+                }
+            };
         }
+
+        true
+    }
+
+    fn toggle_sync(&mut self) -> ShouldRender {
+        let previous_state = mem::replace(&mut self.state, State::Offline);
+
+        self.state = match previous_state {
+            State::Offline => State::Syncing(self.connect()),
+            State::Syncing(_) => State::Offline,
+            State::Presenting(connection) => State::Syncing(connection),
+        };
+
+        self.presenting = false;
 
         true
     }
@@ -73,6 +98,7 @@ impl SlideSync {
     fn reconnect(&mut self) -> ShouldRender {
         match mem::replace(&mut self.state, State::Offline) {
             State::Offline => {}
+            State::Syncing(_) => self.state = State::Syncing(self.connect()),
             State::Presenting(_) => {
                 self.state = State::Presenting(self.connect())
             }
@@ -135,7 +161,7 @@ impl SlideSync {
 impl State {
     pub fn send_position(&mut self, slide: u16, step: u16) {
         match self {
-            State::Offline => {}
+            State::Offline | State::Syncing(_) => {}
             State::Presenting(connection) => {
                 let mut message = Vec::with_capacity(4);
 
@@ -196,41 +222,74 @@ impl Component for SlideSync {
         match message {
             Message::Connected => self.send_position(),
             Message::Disconnected => self.reconnect(),
+            Message::ToggleSync => self.toggle_sync(),
             Message::Update { slide, step } => self.update(slide, step),
             Message::Ignore => false,
         }
     }
 
     fn view(&self) -> Html {
-        if self.presenting {
-            html! {
-                <div style="float: left; margin: 10px">
-                    <svg
-                        viewBox="-70 -70 140 140"
-                        style="height: 20px"
-                        >
-                        <circle
-                            cx = 0
-                            cy = 0
-                            r = 35
-                            style="fill: black"
-                            />
-                    </svg>
-                </div>
+        let toggle_sync = self.component_link.callback(|_| Message::ToggleSync);
+
+        match self.state {
+            State::Offline => {
+                html! {
+                    <div style="float: left; margin: 10px">
+                        <svg
+                            viewBox="-70 -70 140 140"
+                            style="height: 20px"
+                            onclick = toggle_sync
+                            >
+                            <path
+                                d="M-60,-60 L46,0 L-60,60"
+                                style="fill: black"
+                                />
+                        </svg>
+                    </div>
+                }
             }
-        } else {
-            html! {
-                <div style="float: left; margin: 10px">
-                    <svg
-                        viewBox="-70 -70 140 140"
-                        style="height: 20px"
-                        >
-                        <path
-                            d="M-60,-60 L46,0 L-60,60"
-                            style="fill: black"
-                            />
-                    </svg>
-                </div>
+            State::Syncing(_) => {
+                html! {
+                    <div style="float: left; margin: 10px">
+                        <svg
+                            viewBox="-70 -70 140 140"
+                            style="height: 20px"
+                            onclick = toggle_sync
+                            >
+                            <rect
+                                x = "-70"
+                                y = "-70"
+                                width = 40
+                                height = 140
+                                style="fill: black"
+                                />
+                            <rect
+                                x = 30
+                                y = "-70"
+                                width = 40
+                                height = 140
+                                style="fill: black"
+                                />
+                        </svg>
+                    </div>
+                }
+            }
+            State::Presenting(_) => {
+                html! {
+                    <div style="float: left; margin: 10px">
+                        <svg
+                            viewBox="-70 -70 140 140"
+                            style="height: 20px"
+                            >
+                            <circle
+                                cx = 0
+                                cy = 0
+                                r = 35
+                                style="fill: black"
+                                />
+                        </svg>
+                    </div>
+                }
             }
         }
     }
