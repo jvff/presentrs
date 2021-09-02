@@ -1,10 +1,12 @@
-use yew::format::{Nothing, Text};
-use yew::prelude::*;
-use yew::services::fetch::{FetchService, FetchTask, Request, Response};
-use yew::virtual_dom::VNode;
-
-use super::slide::Slide;
-use super::slide_size::SlideSize;
+use {
+    super::{slide::Slide, slide_size::SlideSize},
+    yew::{
+        format::{Nothing, Text},
+        prelude::*,
+        services::fetch::{FetchService, FetchTask, Request, Response},
+        virtual_dom::VNode,
+    },
+};
 
 pub struct Slides {
     locale_path: String,
