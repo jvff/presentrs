@@ -199,7 +199,7 @@ impl Component for SlideSync {
                         style="height: 20px"
                         >
                         <path
-                            d="M50,-50 L-36,0 L50,50"
+                            d="M-60,-60 L46,0 L-60,60"
                             style="fill: black"
                             />
                     </svg>
