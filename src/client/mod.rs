@@ -12,9 +12,10 @@ use {
         slides::Slides,
     },
     lru::LruCache,
-    wasm_bindgen::{closure::Closure, JsCast},
-    web_sys::Event,
-    yew::prelude::*,
+    yew::{
+        prelude::*,
+        services::resize::{ResizeService, ResizeTask, WindowDimensions},
+    },
 };
 
 const SLIDE_WIDTH: f64 = 800.0;
@@ -28,7 +29,7 @@ pub enum Message {
     PreviousStep,
     NextSlide,
     NextStep,
-    Resize,
+    Resize(WindowDimensions),
     TogglePresent,
     ChangePosition { slide: u16, step: u16 },
     Ignore,
@@ -44,23 +45,15 @@ pub struct Presentrs {
     slide_size: SlideSize,
     show_notes: bool,
     presenting: bool,
+    _resize_listener: ResizeTask,
 }
 
 impl Presentrs {
-    fn resize(&mut self) {
-        let window = web_sys::window().expect("Failed to access window");
-        let width = window
-            .inner_width()
-            .expect("Failed to get inner window width")
-            .as_f64()
-            .expect("Inner window width is not a number");
-        let height = window
-            .inner_height()
-            .expect("Failed to get inner window height")
-            .as_f64()
-            .expect("Inner window height is not a number");
-
-        self.slide_size.resize_to_fit_in(width, height);
+    fn resize(&mut self, dimensions: WindowDimensions) {
+        self.slide_size.resize_to_fit_in(
+            dimensions.width as f64,
+            dimensions.height as f64,
+        );
     }
 
     fn on_key_down(event: KeyboardEvent) -> Message {
@@ -90,31 +83,28 @@ impl Component for Presentrs {
         component_link: ComponentLink<Self>,
     ) -> Self {
         let window = web_sys::window().expect("Failed to access window");
-        let component_resize_callback =
-            component_link.callback(|_| Message::Resize);
-        let window_resize_callback = Closure::wrap(Box::new(move |_: &Event| {
-            component_resize_callback.emit(())
-        })
-            as Box<dyn Fn(&Event)>);
+        let window_size = WindowDimensions::get_dimensions(&window);
+        let resize_callback = component_link.callback(Message::Resize);
 
-        window.set_onresize(Some(
-            window_resize_callback.as_ref().unchecked_ref(),
-        ));
+        let mut slide_size = SlideSize::new(SLIDE_WIDTH, SLIDE_HEIGHT);
 
-        let mut this = Presentrs {
+        slide_size.resize_to_fit_in(
+            window_size.width as f64,
+            window_size.height as f64,
+        );
+
+        Presentrs {
             component_link,
             locale: properties.locales.first().cloned(),
             locales: properties.locales,
             current_slide: 1,
             current_step: 1,
             slide_steps_cache: LruCache::new(50),
-            slide_size: SlideSize::new(SLIDE_WIDTH, SLIDE_HEIGHT),
+            slide_size,
             show_notes: false,
             presenting: false,
-        };
-
-        this.resize();
-        this
+            _resize_listener: ResizeService::register(resize_callback),
+        }
     }
 
     fn update(&mut self, message: Self::Message) -> ShouldRender {
@@ -185,7 +175,7 @@ impl Component for Presentrs {
                 self.current_step = step.into();
             }
             Message::TogglePresent => self.presenting = !self.presenting,
-            Message::Resize => self.resize(),
+            Message::Resize(dimensions) => self.resize(dimensions),
             Message::Ignore => return false,
         }
         true
