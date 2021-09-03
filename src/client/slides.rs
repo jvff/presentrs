@@ -133,10 +133,10 @@ impl Component for Slides {
 
                         if index == self.current_slide {
                             self.animate_slide();
+                        }
 
-                            if let Some(ref callback) = self.on_slide_loaded {
-                                callback.emit((index, num_steps));
-                            }
+                        if let Some(ref callback) = self.on_slide_loaded {
+                            callback.emit((index, num_steps));
                         }
                     }
                     Err(error) => {
