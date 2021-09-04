@@ -21,6 +21,7 @@ use {
 const SLIDE_WIDTH: f64 = 800.0;
 const SLIDE_HEIGHT: f64 = 600.0;
 
+#[derive(Debug)]
 pub enum Message {
     ToggleNotes,
     SlideLoaded(usize, usize),
@@ -108,6 +109,7 @@ impl Component for Presentrs {
     }
 
     fn update(&mut self, message: Self::Message) -> ShouldRender {
+        web_sys::console::log_1(&format!("update({:?})", message).into());
         match message {
             Message::ToggleNotes => {
                 self.show_notes = !self.show_notes;
