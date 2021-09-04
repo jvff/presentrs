@@ -24,7 +24,7 @@ impl Slides {
         for offset in -1..3 {
             let index = self.current_slide as isize + offset;
 
-            if index >= 0 {
+            if index > 0 {
                 self.fetch_slide(index as usize);
             }
         }
