@@ -7,20 +7,30 @@ use {
         response::IntoResponse,
     },
     futures_util::{select, FutureExt, StreamExt},
-    std::{convert::TryInto, sync::Arc},
+    std::{
+        convert::TryInto,
+        sync::{
+            atomic::{AtomicUsize, Ordering},
+            Arc,
+        },
+    },
     tokio::sync::broadcast,
     tracing::{trace, trace_span, Span},
 };
 
 pub struct SlidePresenter {
-    position: broadcast::Sender<(u16, u16)>,
+    position: broadcast::Sender<(usize, u16, u16)>,
+    id_counter: AtomicUsize,
 }
 
 impl SlidePresenter {
     pub fn new() -> Arc<Self> {
         let (position, _) = broadcast::channel(1);
 
-        Arc::new(SlidePresenter { position })
+        Arc::new(SlidePresenter {
+            position,
+            id_counter: AtomicUsize::new(0),
+        })
     }
 
     pub async fn handler(
@@ -28,26 +38,28 @@ impl SlidePresenter {
         Extension(presenter): Extension<Arc<SlidePresenter>>,
     ) -> impl IntoResponse {
         let position_receiver = presenter.position.subscribe();
+        let id = presenter.id_counter.fetch_add(1, Ordering::Relaxed);
 
-        web_socket_upgrade.on_upgrade(|web_socket| {
-            presenter.handle(web_socket, position_receiver)
+        web_socket_upgrade.on_upgrade(move |web_socket| {
+            presenter.handle(id, web_socket, position_receiver)
         })
     }
 
     async fn handle(
         self: Arc<Self>,
+        id: usize,
         mut web_socket: WebSocket,
-        mut position_receiver: broadcast::Receiver<(u16, u16)>,
+        mut position_receiver: broadcast::Receiver<(usize, u16, u16)>,
     ) {
-        let span = trace_span!("WebSocket handler");
+        let span = trace_span!("WebSocket handler #{}", id);
 
         loop {
             let result = select! {
                 message = web_socket.next().fuse() => {
-                    self.handle_message(message, &span)
+                    self.handle_message(id, message, &span)
                 }
                 position = position_receiver.recv().fuse() => {
-                    Self::handle_position(position, &mut web_socket, &span).await
+                    Self::handle_position(id, position, &mut web_socket, &span).await
                 }
             };
 
@@ -59,6 +71,7 @@ impl SlidePresenter {
 
     fn handle_message(
         &self,
+        id: usize,
         maybe_message: Option<Result<Message, axum::Error>>,
         span: &Span,
     ) -> Result<(), ()> {
@@ -77,7 +90,7 @@ impl SlidePresenter {
                 });
 
                 self.position
-                    .send((slide_index, step_index))
+                    .send((id, slide_index, step_index))
                     .map_err(|_| ())?;
             }
         }
@@ -86,24 +99,27 @@ impl SlidePresenter {
     }
 
     async fn handle_position(
-        position: Result<(u16, u16), broadcast::error::RecvError>,
+        id: usize,
+        position: Result<(usize, u16, u16), broadcast::error::RecvError>,
         web_socket: &mut WebSocket,
         span: &Span,
     ) -> Result<(), ()> {
-        if let Ok((slide, step)) = position {
-            let mut message_bytes = Vec::with_capacity(4);
+        if let Ok((sender_id, slide, step)) = position {
+            if sender_id != id {
+                let mut message_bytes = Vec::with_capacity(4);
 
-            message_bytes.extend(slide.to_be_bytes());
-            message_bytes.extend(step.to_be_bytes());
+                message_bytes.extend(slide.to_be_bytes());
+                message_bytes.extend(step.to_be_bytes());
 
-            span.in_scope(|| trace!("Sending {}:{}", slide, step));
+                span.in_scope(|| trace!("Sending {}:{}", slide, step));
 
-            web_socket
-                .send(Message::Binary(message_bytes))
-                .await
-                .map_err(|_| ())
-        } else {
-            Ok(())
+                return web_socket
+                    .send(Message::Binary(message_bytes))
+                    .await
+                    .map_err(|_| ());
+            }
         }
+
+        Ok(())
     }
 }
