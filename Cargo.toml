@@ -20,3 +20,4 @@ html5ever = "0.25"
 markup5ever_arcdom = "0.1"
 tower-http = { version = "0.1", features = ["fs"] }
 tokio = { version = "1", features = ["sync"] }
+tracing = "0.1"
