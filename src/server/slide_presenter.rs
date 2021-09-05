@@ -6,6 +6,7 @@ use {
         },
         response::IntoResponse,
     },
+    derive_more::{Display, Error, From},
     futures_util::{select, FutureExt, StreamExt},
     std::{
         convert::TryInto,
@@ -15,7 +16,7 @@ use {
         },
     },
     tokio::sync::broadcast,
-    tracing::{trace, trace_span, Span},
+    tracing::{error, info, trace, trace_span, Span},
 };
 
 pub struct SlidePresenter {
@@ -63,7 +64,8 @@ impl SlidePresenter {
                 }
             };
 
-            if result.is_err() {
+            if let Err(error) = result {
+                error.report(&span);
                 break;
             }
         }
@@ -74,8 +76,10 @@ impl SlidePresenter {
         id: usize,
         maybe_message: Option<Result<Message, axum::Error>>,
         span: &Span,
-    ) -> Result<(), ()> {
-        let message = maybe_message.ok_or(())?.map_err(|_| ())?;
+    ) -> Result<(), Error> {
+        let message = maybe_message
+            .ok_or(Error::Disconnected)?
+            .map_err(Error::Receive)?;
 
         if let Message::Binary(message_bytes) = message {
             if message_bytes.len() == 4 {
@@ -89,9 +93,7 @@ impl SlidePresenter {
                     trace!("Received {}:{}", slide_index, step_index)
                 });
 
-                self.position
-                    .send((id, slide_index, step_index))
-                    .map_err(|_| ())?;
+                self.position.send((id, slide_index, step_index))?;
             }
         }
 
@@ -103,7 +105,7 @@ impl SlidePresenter {
         position: Result<(usize, u16, u16), broadcast::error::RecvError>,
         web_socket: &mut WebSocket,
         span: &Span,
-    ) -> Result<(), ()> {
+    ) -> Result<(), Error> {
         if let Ok((sender_id, slide, step)) = position {
             if sender_id != id {
                 let mut message_bytes = Vec::with_capacity(4);
@@ -113,13 +115,41 @@ impl SlidePresenter {
 
                 span.in_scope(|| trace!("Sending {}:{}", slide, step));
 
-                return web_socket
+                web_socket
                     .send(Message::Binary(message_bytes))
                     .await
-                    .map_err(|_| ());
+                    .map_err(Error::Send)?;
             }
         }
 
         Ok(())
+    }
+}
+
+#[derive(Debug, Display, Error, From)]
+pub enum Error {
+    #[display(fmt = "Client has disconnected")]
+    Disconnected,
+
+    #[display(fmt = "Failed to synchronize position internally")]
+    Internal(broadcast::error::SendError<(usize, u16, u16)>),
+
+    #[display(fmt = "Failed to receive updated position from client")]
+    #[from(ignore)]
+    Receive(axum::Error),
+
+    #[display(fmt = "Failed to send synchronized position to a client")]
+    #[from(ignore)]
+    Send(axum::Error),
+}
+
+impl Error {
+    pub fn report(&self, span: &Span) {
+        span.in_scope(|| match self {
+            Error::Disconnected => info!("{}", self),
+            Error::Internal(_) | Error::Receive(_) | Error::Send(_) => {
+                error!("{}", self)
+            }
+        })
     }
 }
